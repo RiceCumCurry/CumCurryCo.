@@ -385,6 +385,13 @@ const App: React.FC = () => {
           notifications: prev.notifications.filter(n => n.id !== notificationId)
       }));
   };
+  
+  const handleRemoveFriend = (friendId: string) => {
+    setState(prev => ({
+      ...prev,
+      friends: prev.friends.filter(f => f.id !== friendId)
+    }));
+  };
 
   const updateActiveServer = (updates: Partial<Server>) => {
       if (!state.activeServerId) return;
@@ -570,6 +577,7 @@ const App: React.FC = () => {
           isFriend={state.friends.some(f => f.id === state.viewingUserId)}
           onClose={() => setState(prev => ({ ...prev, viewingUserId: null }))}
           onAddFriend={() => handleSendFriendRequest(state.viewingUserId!)}
+          onRemoveFriend={() => handleRemoveFriend(state.viewingUserId!)}
           onEditProfile={() => setState(prev => ({ ...prev, viewingUserId: null, isUserSettingsOpen: true }))}
         />
       )}

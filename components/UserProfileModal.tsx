@@ -9,6 +9,7 @@ interface UserProfileModalProps {
   isFriend: boolean;
   onClose: () => void;
   onAddFriend: () => void;
+  onRemoveFriend: () => void;
   onEditProfile: () => void;
 }
 
@@ -18,6 +19,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isFriend, 
   onClose, 
   onAddFriend,
+  onRemoveFriend,
   onEditProfile 
 }) => {
   const isSelf = user.id === currentUser.id;
@@ -83,9 +85,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 Add Ally
               </button>
             ) : (
-               <div className="px-4 py-2 border border-[#3d2b0f] text-[#8a7038] text-[10px] font-bold uppercase tracking-widest royal-font cursor-default">
-                 Ally
-               </div>
+               <button 
+                 onClick={onRemoveFriend}
+                 className="px-4 py-2 border border-[#3d2b0f] text-[#8a7038] hover:border-red-900 hover:text-red-600 hover:bg-red-900/10 text-[10px] font-bold uppercase tracking-widest royal-font transition-all group flex items-center gap-2"
+               >
+                 <span className="group-hover:hidden flex items-center gap-2">{ICONS.Check} Ally</span>
+                 <span className="hidden group-hover:inline flex items-center gap-2">{ICONS.X} Sever Alliance</span>
+               </button>
             )}
           </div>
         </div>
