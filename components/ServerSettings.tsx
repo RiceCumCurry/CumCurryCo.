@@ -49,7 +49,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, showGiphyPicker]);
 
-  const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
+  const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'CREATE_INVITE', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
   
   const inviteLink = `https://cumcurry.co/invite/${server.id}`;
 
@@ -75,7 +75,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
       name: 'new rank',
       color: '#D4AF37',
       icon: '🛡️',
-      permissions: ['SEND_MESSAGES']
+      permissions: ['SEND_MESSAGES', 'CREATE_INVITE']
     };
     onUpdateServer({ roles: [...server.roles, newRole] });
     setEditingRole(newRole);

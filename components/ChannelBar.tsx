@@ -55,6 +55,21 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
     setShowStatusMenu(false);
   };
 
+  const copyInvite = () => {
+      if (server) {
+          navigator.clipboard.writeText(`https://cumcurry.co/invite/${server.id}`);
+          alert("Invite link copied to clipboard.");
+          setShowServerMenu(false);
+      }
+  };
+
+  const canInvite = isOwner || (() => {
+      if (!currentUser || !server) return false;
+      const memberRoleIds = server.memberRoles[currentUser.id] || [];
+      const memberRoles = server.roles.filter(r => memberRoleIds.includes(r.id));
+      return memberRoles.some(r => r.permissions.includes('CREATE_INVITE'));
+  })();
+
   const statusColors = {
     online: 'bg-green-600',
     idle: 'bg-yellow-600',
@@ -63,7 +78,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
   };
 
   return (
-    <div className="w-72 bg-theme-panel flex flex-col border-r border-theme-border shrink-0 select-none relative z-10">
+    <div className="w-72 bg-theme-panel flex flex-col border-r border-theme-border shrink-0 select-none relative z-10 h-full">
        {/* Background Pattern Overlay */}
        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, var(--gold-primary) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
@@ -98,6 +113,15 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
         {showServerMenu && server && (
           <div className="absolute top-full left-4 right-4 mt-2 z-50 bg-theme-panel border border-theme-text-dim rounded-none shadow-[0_0_30px_rgba(0,0,0,0.8)] p-1 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="border border-theme-border p-1">
+                {canInvite && (
+                    <button 
+                        onClick={copyInvite}
+                        className="w-full flex items-center justify-between px-3 py-3 text-xs font-bold text-theme-gold hover:bg-white/5 hover:text-theme-gold-light transition-all royal-font tracking-widest uppercase mb-1"
+                    >
+                        Invite People
+                        <UserPlus size={16} />
+                    </button>
+                )}
                 <button 
                 onClick={() => { onOpenServerInfo(); setShowServerMenu(false); }}
                 className="w-full flex items-center justify-between px-3 py-3 text-xs font-bold text-theme-text-muted hover:bg-white/5 hover:text-theme-gold transition-all royal-font tracking-widest uppercase"
@@ -249,7 +273,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
       </div>
 
       {/* User Area */}
-      <div className="bg-theme-bg p-3 border-t border-theme-border relative z-20">
+      <div className="bg-theme-bg p-3 border-t border-theme-border relative z-20 mt-auto">
         <div className="flex items-center gap-2 mb-3 px-1">
            {currentUser?.customStatus ? (
              <div className="flex items-center gap-2 overflow-hidden w-full">

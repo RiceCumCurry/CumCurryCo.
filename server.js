@@ -143,6 +143,8 @@ io.on('connection', (socket) => {
       s.memberJoinedAt && (s.memberJoinedAt[userId] || s.ownerId === userId)
     );
     
+    const publicServers = Object.values(servers).filter(s => s.isPublic);
+    
     const userFriendIds = friends[userId] || [];
     const userFriends = userFriendIds.map(fid => users[fid]).filter(Boolean);
     const userNotifs = notifications[userId] || [];
@@ -150,6 +152,7 @@ io.on('connection', (socket) => {
 
     callback({
       servers: userServers,
+      publicServers: publicServers,
       friends: userFriends,
       notifications: userNotifs,
       allUsers: allUsers,
@@ -161,6 +164,9 @@ io.on('connection', (socket) => {
   socket.on('server:create', (serverData, callback) => {
     servers[serverData.id] = serverData;
     callback({ success: true });
+    if (serverData.isPublic) {
+        broadcastServerUpdate(serverData);
+    }
   });
 
   socket.on('server:join', ({ serverId, userId }) => {

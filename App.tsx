@@ -86,11 +86,7 @@ const App: React.FC = () => {
           }));
           
           setGlobalUserCache(response.allUsers || []);
-          // Public servers are not sent in sync per user, let's assume all servers we know are the starting point, 
-          // or we can fetch explore data later. For now, let's filter explore from all servers logic if available?
-          // Actually, let's assume we can fetch them or just use what we have if they are public.
-          // In this implementation, `data:sync` returns servers user is IN. 
-          // We can fetch public servers separately or assume `globalUserCache` helps identify people.
+          setPublicServers(response.publicServers || []);
       });
   };
 
@@ -367,25 +363,28 @@ const App: React.FC = () => {
       const query = queryOverride || joinServerQuery;
       if (!query.trim()) return;
       
-      // Search in all servers (we need an endpoint for this ideally, but using global cache for now)
-      // Since we don't have ALL servers in state, this search is limited to what we know.
-      // Ideally we ask server "Find me this server". 
-      // For this implementation, let's check our known public servers or ask user to provide ID.
-      // Note: In real app, `socket.emit('server:search', ...)`
+      // Attempt to extract ID if it's a URL
+      let targetId = query;
+      const urlMatch = query.match(/cumcurry\.co\/invite\/([a-zA-Z0-9_-]+)/);
+      if (urlMatch) {
+          targetId = urlMatch[1];
+      }
       
-      // Fallback: Check global cache of public servers from `data:sync` if we implemented that fully, 
-      // but we didn't send ALL servers. Let's assume user entered an ID or Name we can find in `publicServers` state (which we populate on explore).
-      // Or search local joined servers first.
-      
-      const targetServer = state.servers.find(s => s.id === query || s.name.toLowerCase() === query.toLowerCase());
+      // Search in public servers first
+      const targetServer = publicServers.find(s => s.id === targetId || s.name.toLowerCase() === targetId.toLowerCase());
       
       if (targetServer) {
-          handleServerSelect(targetServer.id);
+          if (state.servers.some(s => s.id === targetServer.id)) {
+              handleServerSelect(targetServer.id);
+              setState(prev => ({ ...prev, isCreateServerOpen: false }));
+              return;
+          }
+          joinServer(targetServer);
           setState(prev => ({ ...prev, isCreateServerOpen: false }));
           return;
       }
       
-      alert("Realm not found in your archives. Try exploring public realms.");
+      alert("Realm not found in public records. If it is private, ensure you have the correct code.");
   };
 
   const createServer = () => {
@@ -560,36 +559,50 @@ const App: React.FC = () => {
               </div>
               <h1 className="text-2xl md:text-4xl royal-font font-bold mb-6 md:mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-                {state.servers.map(server => (
-                    <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative h-32 md:h-40 mb-4 overflow-hidden bg-black">
-                        <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover sepia-[0.5] group-hover:sepia-0 transition-all opacity-80" />
-                        <div className="absolute bottom-[-20px] left-4">
-                            <img src={server.icon} className="w-16 h-16 rounded-full border-4 border-theme-panel object-cover shadow-lg" />
+                {publicServers.map(server => {
+                    const isMember = state.servers.some(s => s.id === server.id);
+                    return (
+                        <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative h-32 md:h-40 mb-4 overflow-hidden bg-black">
+                            <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover sepia-[0.5] group-hover:sepia-0 transition-all opacity-80" />
+                            <div className="absolute bottom-[-20px] left-4">
+                                <img src={server.icon} className="w-16 h-16 rounded-full border-4 border-theme-panel object-cover shadow-lg" />
+                            </div>
                         </div>
+                        <div className="mt-4 flex-1">
+                                <h3 className="font-bold text-lg mb-1 uppercase tracking-wide text-theme-gold-light royal-font truncate">{server.name}</h3>
+                                <p className="text-xs text-theme-text-dim mb-4">{Object.keys(server.memberJoinedAt || {}).length} Members</p>
+                        </div>
+                        {isMember ? (
+                            <button 
+                                onClick={() => handleServerSelect(server.id)}
+                                className="w-full py-3 bg-white/5 border border-theme-gold text-theme-gold font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto hover:bg-theme-gold hover:text-black"
+                            >
+                                Enter Realm
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => joinServer(server)}
+                                className="w-full py-3 bg-theme-panel border border-theme-border text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto"
+                            >
+                                Pledge Loyalty
+                            </button>
+                        )}
+                        </div>
+                    );
+                })}
+                {publicServers.length === 0 && (
+                    <div className="col-span-full flex flex-col items-center justify-center p-8 border border-theme-text-dim border-dashed text-theme-text-muted h-64">
+                        <p className="text-xs mb-4">No public realms discovered yet.</p>
                     </div>
-                    <div className="mt-4 flex-1">
-                            <h3 className="font-bold text-lg mb-1 uppercase tracking-wide text-theme-gold-light royal-font truncate">{server.name}</h3>
-                            <p className="text-xs text-theme-text-dim mb-4">{Object.keys(server.memberJoinedAt).length} Members</p>
-                    </div>
-                    <button 
-                        onClick={() => handleServerSelect(server.id)}
-                        className="w-full py-3 bg-white/5 border border-theme-gold text-theme-gold font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto hover:bg-theme-gold hover:text-black"
-                    >
-                        Enter Realm
-                    </button>
-                    </div>
-                ))}
-                {/* Fallback for empty state or to show we can add more */}
-                <div className="flex flex-col items-center justify-center p-8 border border-theme-text-dim border-dashed text-theme-text-muted">
-                    <p className="text-xs mb-4">Discover more realms by searching.</p>
-                </div>
+                )}
               </div>
             </div>
           ) : (activeChannel || isDM) ? (
             <ChatArea 
               channelName={currentChannelName} 
+              channelId={state.activeChannelId}
               currentUser={state.currentUser} 
               messages={activeMessages}
               notifications={state.notifications}

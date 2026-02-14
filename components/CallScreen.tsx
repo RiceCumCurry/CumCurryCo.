@@ -74,15 +74,10 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
         // Handle ICE candidates
         peer.onicecandidate = (event) => {
             if (event.candidate) {
-                // Determine target - Simplification: In a 2-person call, we broadcast or send to "the other person".
-                // Since we don't have the target ID easily here without state, 
-                // we'll rely on the server to route or broadcast to room for 1v1.
-                // NOTE: For robust 1v1, we need to know who we are calling. 
-                // Let's assume we are calling the first participant that isn't us, OR
-                // we broadcast to the room and the other person picks it up.
-                // Server change: 'call:signal' with null targetUserId could broadcast to others in room.
-                
-                // However, to be precise, let's use the `participants` prop to find the other user.
+                // To support 1v1 DMs reliably without knowing exactly who connected first in the chaos:
+                // We broadcast candidates. The server handles routing if we provide a target, 
+                // OR we can assume if we are in a DM, we send to the other person if we know them.
+                // Since `participants` prop is populated for DMs:
                 const target = participants.find(p => p.id !== currentUser.id);
                 if (target) {
                     socket.emit('call:signal', {
@@ -98,6 +93,8 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
             console.log("Connection state:", peer.connectionState);
             if (peer.connectionState === 'disconnected') {
                 setConnectionState('disconnected');
+            } else if (peer.connectionState === 'connected') {
+                setConnectionState('connected');
             }
         };
 
@@ -111,6 +108,9 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
             try {
                 if (signalData.type === 'offer') {
                     console.log("Received Offer from", fromUserId);
+                    // If we already have a connection or offer, we might need to handle glare.
+                    // For simplicity, we accept the new offer here.
+                    
                     await peerRef.current.setRemoteDescription(new RTCSessionDescription(signalData.offer));
                     const answer = await peerRef.current.createAnswer();
                     await peerRef.current.setLocalDescription(answer);
@@ -127,6 +127,9 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
                     console.log("Received ICE Candidate");
                     if (peerRef.current.remoteDescription) {
                         await peerRef.current.addIceCandidate(new RTCIceCandidate(signalData.candidate));
+                    } else {
+                        // Queue candidate? For simple apps, dropping it or waiting might cause issues. 
+                        // Usually candidates come after offer/answer.
                     }
                 }
             } catch (err) {
@@ -134,12 +137,13 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
             }
         };
 
-        // Handle when a new peer joins the room (If we are already here, we initiate)
+        // Handle when a new peer joins the room
+        // CRITICAL: Only the existing peer initiates the offer to the new peer.
+        // This avoids race conditions where both try to offer.
         const handlePeerJoined = async ({ userId }: { userId: string }) => {
             if (userId === currentUser.id) return;
             console.log("Peer joined:", userId, "Initiating offer...");
             
-            // Create Offer
             const offer = await peer.createOffer();
             await peer.setLocalDescription(offer);
 
@@ -153,21 +157,18 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
         socket.on('call:signal', handleSignal);
         socket.on('call:peer-joined', handlePeerJoined);
 
+        // Re-join on reconnect to ensure presence
+        socket.on('connect', () => {
+             socket.emit('call:join', { channelId: activeChannelId });
+        });
+
         // Join the signaling room
         socket.emit('call:join', { channelId: activeChannelId });
-
-        // If participants already exist, initiate offer to the first one found
-        if (participants.length > 0) {
-             const target = participants.find(p => p.id !== currentUser.id);
-             if (target) {
-                 // Small delay to ensure socket join is processed
-                 setTimeout(() => handlePeerJoined({ userId: target.id }), 1000);
-             }
-        }
 
         return () => {
             socket.off('call:signal', handleSignal);
             socket.off('call:peer-joined', handlePeerJoined);
+            socket.off('connect');
         };
 
       } catch (err) {
@@ -187,7 +188,7 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
         peerRef.current.close();
       }
     };
-  }, [activeChannelId]); // Re-run only if channel changes (unlikely during call)
+  }, [activeChannelId]); // Re-run only if channel changes
 
   // Toggle Mute/Video logic
   useEffect(() => {
@@ -218,10 +219,21 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
             setIsVideoOn(false); // UI toggle
 
             screenTrack.onended = () => {
-                // Revert to camera
+                // Revert to camera (requires re-acquiring or storing previous stream)
+                // For simplicity, just stopping share state, user might need to toggle video back on to re-grab camera
                 setIsScreenSharing(false);
-                setIsVideoOn(true);
-                // We'd need to re-get user media here in a real app or keep the original stream handy
+                setIsVideoOn(true); 
+                // To properly revert, we'd need to getUserMedia again here
+                navigator.mediaDevices.getUserMedia({ video: true }).then(camStream => {
+                     const camTrack = camStream.getVideoTracks()[0];
+                     if (peerRef.current) {
+                        const senders = peerRef.current.getSenders();
+                        const videoSender = senders.find(s => s.track?.kind === 'video');
+                        if (videoSender) videoSender.replaceTrack(camTrack);
+                     }
+                     if (localVideoRef.current) localVideoRef.current.srcObject = camStream;
+                     localStreamRef.current = camStream; // Update Ref
+                });
             };
         } catch (e) {
             console.error("Screen share failed", e);
@@ -322,6 +334,7 @@ const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants
                 <div className="mt-8 text-2xl font-black text-zinc-600 uppercase tracking-tighter italic">
                     {connectionState === 'connecting' ? 'Searching for Carrier Signal...' : 'Signal Lost'}
                 </div>
+                <div className="mt-2 text-zinc-700 text-xs font-mono">Waiting for peer...</div>
              </div>
           )}
 

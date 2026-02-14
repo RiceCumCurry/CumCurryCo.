@@ -2,11 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Message, User, Notification, Server, Role } from '../types';
-import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus, Menu, LogIn } from 'lucide-react';
+import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus, Menu, LogIn, User as UserIcon } from 'lucide-react';
 import ForwardModal from './ForwardModal';
 
 interface ChatAreaProps {
   channelName: string;
+  channelId: string | null; // Added prop
   currentUser: User | null;
   messages: Message[];
   notifications: Notification[];
@@ -24,13 +25,14 @@ interface ChatAreaProps {
   onCall?: (type: 'VOICE' | 'VIDEO') => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   onToggleMobileMenu: () => void;
-  onJoinServer?: (link: string) => void; // New prop
+  onJoinServer?: (link: string) => void;
 }
 
 const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉', '👍', '👎', '❤️', '😂'];
 
 const ChatArea: React.FC<ChatAreaProps> = ({ 
   channelName, 
+  channelId,
   currentUser, 
   messages, 
   notifications,
@@ -85,6 +87,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     setMentionQuery(null);
   };
 
+  const handleHeaderClick = () => {
+      if (isDM && channelId) {
+          const friendId = channelId.replace('dm_', '');
+          onViewUser(friendId);
+      }
+  };
+
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
   };
@@ -135,71 +144,69 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const showEveryoneOption = mentionQuery !== null && 'everyone'.includes(mentionQuery);
 
   const renderMessageContent = (content: string) => {
-    const inviteRegex = /(https?:\/\/)?(www\.)?cumcurry\.co\/invite\/([a-zA-Z0-9_-]+)/g;
-    
-    // Split content by invite links to inject special components
-    const parts = content.split(inviteRegex);
-    const matches = content.match(inviteRegex);
+    const inviteLinkRegex = /((?:https?:\/\/)?(?:www\.)?cumcurry\.co\/invite\/[a-zA-Z0-9_-]+)/g;
+    const parts = content.split(inviteLinkRegex);
 
-    if (matches && onJoinServer) {
-        return (
-            <div className="flex flex-col gap-1 items-start">
-               <span>
-                 {content.split(inviteRegex).filter((part, index) => {
-                    // Filter out the capture groups from regex split that aren't the main text
-                    // This is a rough split logic simplification for React rendering
-                    return !part.startsWith('http') && part !== 'www.' && !matches.some(m => m.includes(part));
-                 }).join(' ')}
-               </span>
-               {matches.map((link, i) => (
-                   <div key={i} className="mt-2 p-3 bg-theme-panel border border-theme-gold/50 rounded-lg max-w-sm w-full">
-                       <div className="text-[10px] uppercase font-bold text-theme-text-dim tracking-widest mb-1 royal-font">Official Decree</div>
-                       <div className="text-sm font-bold text-theme-gold mb-2">Realm Invitation</div>
-                       <div className="text-xs text-theme-text-muted mb-3 truncate font-mono bg-black/30 p-1 rounded">{link}</div>
-                       <button 
-                         onClick={() => onJoinServer(link)}
-                         className="w-full py-2 bg-theme-gold text-black text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 royal-font"
-                       >
-                           <LogIn size={14} /> Accept Invite
-                       </button>
-                   </div>
-               ))}
-            </div>
-        );
-    }
-
-    return content.split(/(\s+)/).map((word, i) => {
-        if (word === '@everyone') {
-            return <span key={i} className="bg-theme-gold/20 text-theme-gold px-1 rounded font-bold cursor-default">@everyone</span>;
-        }
-        if (word.startsWith('@')) {
-            const username = word.substring(1);
-            const user = allUsers.find(u => u.username === username);
-            if (user) {
-                return (
-                    <span 
-                        key={i} 
-                        className="text-theme-gold-light bg-theme-gold/10 px-1 rounded font-bold cursor-pointer hover:underline hover:bg-theme-gold/20 transition-all" 
-                        onClick={() => onViewUser(user.id)}
-                    >
-                        {word}
-                    </span>
-                );
+    return (
+      <div className="flex flex-col gap-1 items-start">
+        <span>
+          {parts.map((part, index) => {
+            if (part.match(inviteLinkRegex)) {
+               return (
+                 <a key={index} href={part.startsWith('http') ? part : `https://${part}`} target="_blank" rel="noreferrer" className="text-theme-gold hover:underline font-bold">
+                   {part}
+                 </a>
+               );
             }
-        }
-        // Basic Link Detection
-        if (word.match(/^https?:\/\//)) {
-             return <a key={i} href={word} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{word}</a>;
-        }
-        return word;
-    });
+            return part.split(/(\s+)/).map((word, i) => {
+                if (word === '@everyone') {
+                    return <span key={`${index}-${i}`} className="bg-theme-gold/20 text-theme-gold px-1 rounded font-bold cursor-default">@everyone</span>;
+                }
+                if (word.startsWith('@')) {
+                    const username = word.substring(1);
+                    const user = allUsers.find(u => u.username === username);
+                    if (user) {
+                        return (
+                            <span 
+                                key={`${index}-${i}`} 
+                                className="text-theme-gold-light bg-theme-gold/10 px-1 rounded font-bold cursor-pointer hover:underline hover:bg-theme-gold/20 transition-all" 
+                                onClick={() => onViewUser(user.id)}
+                            >
+                                {word}
+                            </span>
+                        );
+                    }
+                }
+                if (word.match(/^https?:\/\//) && !word.includes('cumcurry.co/invite')) {
+                     return <a key={`${index}-${i}`} href={word} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{word}</a>;
+                }
+                return <span key={`${index}-${i}`}>{word}</span>;
+            });
+          })}
+        </span>
+        
+        {parts.filter(p => p.match(inviteLinkRegex)).map((link, i) => (
+           <div key={i} className="mt-2 p-3 bg-theme-panel border border-theme-gold/50 rounded-lg max-w-sm w-full shadow-lg">
+               <div className="text-[10px] uppercase font-bold text-theme-text-dim tracking-widest mb-1 royal-font">Official Decree</div>
+               <div className="text-sm font-bold text-theme-gold mb-2">Realm Invitation</div>
+               <div className="text-xs text-theme-text-muted mb-3 truncate font-mono bg-black/30 p-1 rounded select-all">{link}</div>
+               {onJoinServer && (
+                   <button 
+                     onClick={() => onJoinServer(link)}
+                     className="w-full py-2 bg-theme-gold text-black text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 royal-font"
+                   >
+                       <LogIn size={14} /> Accept Invite
+                   </button>
+               )}
+           </div>
+        ))}
+      </div>
+    );
   };
 
   const memberGroups = React.useMemo(() => {
     if (!server) return [];
-    
     const sortedRoles = [...server.roles];
-    
     const groups: { role: Role | null, members: User[] }[] = [];
     const membersWithRole = new Set<string>();
 
@@ -246,7 +253,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         <div className="h-16 border-b border-theme-border flex items-center px-4 md:px-8 justify-between bg-theme-bg/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
             <div className="flex items-center gap-4">
             
-            {/* Mobile Menu Trigger */}
             <button 
                 onClick={onToggleMobileMenu}
                 className="md:hidden text-theme-gold hover:text-theme-gold-light"
@@ -255,16 +261,21 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </button>
 
             <span className="text-theme-text-muted font-serif text-2xl hidden md:block">✦</span>
-            <div className="flex flex-col">
-                <span className="royal-font font-bold text-theme-gold uppercase tracking-widest text-lg truncate max-w-[150px] md:max-w-none">{channelName}</span>
+            <button 
+                onClick={handleHeaderClick}
+                className={`flex flex-col text-left ${isDM ? 'cursor-pointer hover:opacity-80 transition-opacity group' : 'cursor-default'}`}
+            >
+                <span className="royal-font font-bold text-theme-gold uppercase tracking-widest text-lg truncate max-w-[150px] md:max-w-none flex items-center gap-2">
+                    {channelName}
+                    {isDM && <UserIcon size={14} className="text-theme-text-dim group-hover:text-theme-gold transition-colors" />}
+                </span>
                 <span className="text-[9px] text-theme-text-dim uppercase tracking-[0.2em] font-bold hidden md:block">
                   {isDM ? 'Private Correspondence' : 'Chamber of Discourse'}
                 </span>
-            </div>
+            </button>
             </div>
             <div className="flex items-center gap-4 md:gap-6 text-theme-text-dim">
             
-            {/* Private Call Buttons for DMs */}
             {isDM && onCall && (
                 <div className="flex items-center gap-4 border-r border-theme-border pr-6">
                     <button 
@@ -284,7 +295,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </div>
             )}
 
-            {/* Notifications */}
             <div className="relative">
                 <button 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -349,7 +359,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
         </div>
 
-        {/* Messages */}
+        {/* Messages List & Input Area */}
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 custom-scrollbar" ref={scrollRef} onClick={() => setReactingToMessageId(null)}>
             <div className="py-16 px-10 border-b border-theme-border mb-10 max-w-4xl mx-auto text-center ornate-divider hidden md:flex">
             <div>
@@ -372,7 +382,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             return (
                 <div key={msg.id} className={`flex gap-4 md:gap-6 group px-2 md:px-4 py-2 transition-all rounded-lg border border-transparent hover:border-theme-border relative ${isMention ? 'bg-theme-gold/10 border-l-2 border-l-theme-gold' : 'hover:bg-theme-gold/5'}`}>
                 
-                {/* Action Buttons (On Hover) */}
                 <div className="absolute top-0 right-4 -translate-y-1/2 flex items-center bg-theme-panel border border-theme-text-dim rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setReactingToMessageId(reactingToMessageId === msg.id ? null : msg.id); }} 
@@ -397,7 +406,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     )}
                 </div>
 
-                {/* Reaction Picker (Absolute) */}
                 {reactingToMessageId === msg.id && (
                     <div className="absolute top-8 right-0 z-20 bg-theme-panel border border-theme-border p-2 grid grid-cols-6 gap-1 shadow-2xl rounded-lg animate-in fade-in zoom-in-95 duration-100 w-48">
                         {EMOJIS.map(emoji => (
@@ -449,7 +457,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     </span>
                     </div>
 
-                    {/* Reply Context */}
                     {parentMessage && (
                         <div className="flex items-center gap-2 mb-1 opacity-60 text-[10px] italic">
                             <div className="w-8 h-3 border-t-2 border-l-2 border-theme-text-dim rounded-tl-lg" />
@@ -462,7 +469,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         {renderMessageContent(msg.content)}
                     </div>
 
-                    {/* Reactions Display */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                             {Object.entries(msg.reactions).map(([emoji, userIds]) => {
@@ -491,9 +497,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="h-4" />
         </div>
 
-        {/* Input - (Standard input section remains same) */}
         <div className="px-4 md:px-8 pb-8 pt-4 bg-gradient-to-t from-theme-bg to-transparent relative shrink-0">
-            {/* Mention Autocomplete */}
             {mentionQuery !== null && (filteredUsers.length > 0 || showEveryoneOption) && (
                 <div className="absolute bottom-24 left-16 bg-theme-panel border border-theme-text-dim shadow-2xl z-50 rounded min-w-[200px] overflow-hidden">
                     <div className="p-2 bg-white/5 text-[10px] font-bold uppercase tracking-widest text-theme-text-muted border-b border-theme-border">
@@ -536,7 +540,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
             )}
             
-            {/* Reply Indicator Bar */}
             {replyingTo && (
                 <div className="flex items-center justify-between bg-theme-panel border-t border-l border-r border-theme-border px-4 py-2 mx-2 rounded-t text-xs">
                     <div className="flex items-center gap-2 text-theme-text-muted">
@@ -550,7 +553,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             )}
 
             <div className={`bg-theme-panel border border-theme-border flex items-center px-4 py-3 gap-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] focus-within:border-theme-text-muted transition-all relative ${replyingTo ? 'rounded-b border-t-0' : 'rounded-none'}`}>
-            {/* Decorative corners */}
             {!replyingTo && (
                 <>
                 <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-theme-gold" />
@@ -590,7 +592,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
         </div>
 
-        {/* Member List Sidebar - Only show for servers */}
         {showMembers && !isDM && (
             <div className="w-64 bg-theme-panel border-l border-theme-border flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20 absolute right-0 h-full md:relative">
                 <div className="p-4 border-b border-theme-border bg-theme-bg flex justify-between items-center">
