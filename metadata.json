@@ -3,6 +3,7 @@
   "description": "A lightweight, high-performance messaging platform for gamers. Features text, voice, and video calling with a sleek dark theme accented by fiery gradients.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "display-capture"
   ]
 }

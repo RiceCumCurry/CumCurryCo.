@@ -85,6 +85,25 @@ const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', 'royal');
   }, []);
 
+  // Global Click Effect
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+        const bubble = document.createElement('div');
+        bubble.className = 'click-fx';
+        bubble.style.left = `${e.pageX}px`;
+        bubble.style.top = `${e.pageY}px`;
+        document.body.appendChild(bubble);
+
+        // Remove element after animation finishes
+        setTimeout(() => {
+            bubble.remove();
+        }, 500);
+    };
+
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, []);
+
   // Ping Simulation
   useEffect(() => {
     const interval = setInterval(() => {
@@ -203,11 +222,9 @@ const App: React.FC = () => {
 
       const activeServer = state.servers.find(s => s.id === state.activeServerId);
       
-      // Check permissions for @everyone
-      if (content.includes('@everyone')) {
-        if (activeServer && !hasPermission(state.currentUser.id, activeServer, 'MENTION_EVERYONE')) {
-          // In a real app we might block it, here we will just alert and not send, or strip it.
-          // For demo purposes, let's just alert.
+      // Check permissions for @everyone if in a server
+      if (activeServer && content.includes('@everyone')) {
+        if (!hasPermission(state.currentUser.id, activeServer, 'MENTION_EVERYONE')) {
           alert("You do not have permission to summon everyone.");
           return; 
         }
@@ -226,7 +243,7 @@ const App: React.FC = () => {
           newNotifications.push({
               id: 'n' + Date.now(),
               type: 'MENTION',
-              content: `${state.currentUser.username} mentioned you in #${activeChannel?.name}`,
+              content: `${state.currentUser.username} mentioned you in #${activeChannel?.name || 'DM'}`,
               fromUserId: state.currentUser.id,
               read: false,
               timestamp: Date.now()
@@ -244,8 +261,6 @@ const App: React.FC = () => {
   };
 
   const handleSendFriendRequest = (toUserId: string) => {
-      // In a real app, this would send an API request
-      // For demo, we just add a notification to the local state (simulating receiver for now, or just alert)
       alert("Alliance proposal dispatched.");
   };
 
@@ -319,6 +334,15 @@ const App: React.FC = () => {
   const activeChannel = activeServer?.channels.find(c => c.id === state.activeChannelId) || null;
   const activeMessages = state.activeChannelId ? (state.messages[state.activeChannelId] || []) : [];
 
+  // Determine if we are in a DM
+  const isDM = !state.activeServerId && state.activeChannelId && state.activeChannelId.startsWith('dm_');
+  let currentChannelName = activeChannel?.name || 'Unknown';
+  if (isDM) {
+      const dmFriendId = state.activeChannelId!.replace('dm_', '');
+      const friend = state.friends.find(f => f.id === dmFriendId);
+      currentChannelName = friend?.username || 'Private Chat';
+  }
+
   // Combine all known users for lookup
   const allKnownUsers = state.currentUser ? [state.currentUser, ...state.friends] : [];
 
@@ -371,18 +395,20 @@ const App: React.FC = () => {
                 ))}
               </div>
             </div>
-          ) : activeChannel ? (
+          ) : (activeChannel || isDM) ? (
             <ChatArea 
-              channelName={activeChannel.name} 
+              channelName={currentChannelName} 
               currentUser={state.currentUser} 
               messages={activeMessages}
               notifications={state.notifications}
               allUsers={allKnownUsers}
               server={activeServer}
+              isDM={isDM}
               onSendMessage={handleSendMessage}
               onViewUser={(userId) => setState(prev => ({ ...prev, viewingUserId: userId }))}
               onAcceptFriendRequest={handleAcceptFriendRequest}
               onRejectFriendRequest={handleRejectFriendRequest}
+              onCall={isDM ? (type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any })) : undefined}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-8 bg-[#050505] mandala-bg">

@@ -82,9 +82,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-50" />
         <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-50" />
         
-        <div className="text-center mb-10 relative z-10">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full border border-[#D4AF37] flex items-center justify-center bg-black/50 shadow-[0_0_20px_rgba(212,175,55,0.3)]">
-              <span className="text-2xl text-[#D4AF37]">⚜️</span>
+        <div className="text-center mb-10 relative z-10 flex flex-col items-center">
+          <div className="w-24 h-24 mb-4 rounded-full border border-[#D4AF37] flex items-center justify-center bg-black/50 shadow-[0_0_20px_rgba(212,175,55,0.3)] overflow-hidden group">
+              <div className="absolute inset-0 bg-[#D4AF37] opacity-5 group-hover:opacity-10 transition-opacity" />
+              {/* Embedded SVG Logo */}
+              <svg 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="w-14 h-14 text-[#D4AF37] drop-shadow-[0_0_10px_rgba(212,175,55,0.5)]"
+              >
+                <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14v2H5v-2z" fill="#D4AF37" fillOpacity="0.1" />
+              </svg>
           </div>
           <h1 className="text-3xl royal-font font-bold text-[#F4C430] tracking-[0.2em] mb-2">CUMCURRY</h1>
           <p className="text-[#8a7038] text-xs uppercase tracking-widest font-bold">The Royal Court of Gaming</p>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Server, Role, Permission, User } from '../types';
 import { ICONS } from '../constants';
+import { GripVertical, Trash2, Crown, Copy, Check } from 'lucide-react';
 
 interface ServerSettingsProps {
   server: Server;
@@ -13,8 +14,18 @@ interface ServerSettingsProps {
 const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClose, onUpdateServer }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'members'>('overview');
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [draggedRoleIndex, setDraggedRoleIndex] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
+  
+  const inviteLink = `https://cumcurry.co/invite/${server.id}`;
+
+  const copyInvite = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const togglePermission = (role: Role, perm: Permission) => {
     const newPerms = role.permissions.includes(perm)
@@ -35,6 +46,46 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
     };
     onUpdateServer({ roles: [...server.roles, newRole] });
     setEditingRole(newRole);
+  };
+
+  const deleteRole = (roleId: string) => {
+    const updatedRoles = server.roles.filter(r => r.id !== roleId);
+    onUpdateServer({ roles: updatedRoles });
+    if (editingRole?.id === roleId) setEditingRole(null);
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    // Prevent dragging the owner role (index 0)
+    if (index === 0) {
+        e.preventDefault();
+        return;
+    }
+    setDraggedRoleIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    // Prevent dropping onto the owner role (index 0)
+    if (index === 0) {
+        e.dataTransfer.dropEffect = 'none';
+        return;
+    }
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedRoleIndex === null || draggedRoleIndex === dropIndex) return;
+    if (dropIndex === 0) return; // Cannot displace owner role
+
+    const newRoles = [...server.roles];
+    const [draggedRole] = newRoles.splice(draggedRoleIndex, 1);
+    newRoles.splice(dropIndex, 0, draggedRole);
+
+    onUpdateServer({ roles: newRoles });
+    setDraggedRoleIndex(null);
   };
 
   return (
@@ -99,6 +150,23 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                       className="w-full bg-[#0a0a0a] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37]" 
                     />
                   </div>
+
+                  <div className="bg-[#0a0a0a] border border-[#3d2b0f] p-4">
+                    <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-2 royal-font">Realm Invite Link</label>
+                    <div className="flex gap-2">
+                        <input 
+                        readOnly 
+                        value={inviteLink}
+                        className="flex-1 bg-[#050505] border border-[#3d2b0f] p-3 text-[#8a7038] font-mono text-xs focus:outline-none"
+                        />
+                        <button 
+                        onClick={copyInvite}
+                        className="px-4 bg-[#1a1a1a] border border-[#3d2b0f] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all flex items-center justify-center"
+                        >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -114,26 +182,68 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                 <button onClick={addRole} className="px-6 py-3 bg-[#1a1a1a] border border-[#D4AF37] text-[#D4AF37] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37] hover:text-black transition-all">New Rank</button>
               </div>
 
-              <div className="grid grid-cols-[250px_1fr] gap-10">
-                <div className="space-y-1">
-                  {server.roles.map(role => (
-                    <button 
-                      key={role.id}
-                      onClick={() => setEditingRole(role)}
-                      className={`w-full text-left px-4 py-3 border border-transparent text-sm font-bold transition-all flex items-center justify-between group ${editingRole?.id === role.id ? 'bg-[#1a1a1a] border-[#5c4010] text-[#F4C430]' : 'text-[#8a7038] hover:bg-[#111]'}`}
-                    >
-                      <span className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: role.color }} />
-                        <span className="royal-font tracking-wide uppercase text-xs">{role.name}</span>
-                      </span>
-                      {ICONS.ChevronDown}
-                    </button>
-                  ))}
+              <div className="grid grid-cols-[300px_1fr] gap-10">
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase font-bold text-[#5c4010] tracking-widest px-2 mb-2 royal-font">Drag to Reorder</div>
+                  {server.roles.map((role, index) => {
+                    const isOwnerRole = index === 0;
+                    return (
+                        <div
+                            key={role.id}
+                            draggable={!isOwnerRole}
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onClick={() => setEditingRole(role)}
+                            className={`w-full text-left px-3 py-3 border text-sm font-bold transition-all flex items-center gap-3 group relative
+                                ${editingRole?.id === role.id 
+                                    ? 'bg-[#1a1a1a] border-[#D4AF37] text-[#F4C430] z-10' 
+                                    : 'border-transparent bg-[#080808] text-[#8a7038] hover:bg-[#111] hover:text-[#D4AF37]'
+                                }
+                                ${draggedRoleIndex === index ? 'opacity-50 border-dashed border-[#8a7038]' : ''}
+                                ${isOwnerRole ? 'border-[#5c4010] bg-[#0a0a0a]' : 'cursor-pointer'}
+                            `}
+                        >
+                            <div className={`shrink-0 ${isOwnerRole ? 'cursor-default' : 'cursor-move text-[#5c4010] hover:text-[#D4AF37]'}`}>
+                                {isOwnerRole ? <Crown size={14} className="text-[#D4AF37]" /> : <GripVertical size={14} />}
+                            </div>
+                            
+                            <div className="flex-1 flex items-center gap-3 overflow-hidden">
+                                <div className="w-2 h-2 rounded-full shrink-0 shadow-[0_0_5px_currentColor]" style={{ backgroundColor: role.color }} />
+                                <span className="royal-font tracking-wide uppercase text-xs truncate">{role.name}</span>
+                            </div>
+
+                            {!isOwnerRole && (
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); deleteRole(role.id); }}
+                                        className="p-1.5 hover:bg-red-900/20 text-red-800 hover:text-red-500 rounded transition-colors"
+                                        title="Delete Rank"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Selection Indicator */}
+                            {editingRole?.id === role.id && (
+                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#D4AF37]" />
+                            )}
+                        </div>
+                    );
+                  })}
                 </div>
 
                 <div className="bg-[#0a0a0a] border border-[#3d2b0f] p-8 min-h-[400px]">
                   {editingRole ? (
-                    <div className="space-y-8">
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div className="flex items-center justify-between">
+                         <h3 className="text-sm font-bold uppercase tracking-widest text-[#F4C430] royal-font">Editing: {editingRole.name}</h3>
+                         {server.roles[0].id === editingRole.id && (
+                             <span className="text-[10px] font-bold uppercase bg-[#D4AF37] text-black px-2 py-0.5 rounded-sm">High Command</span>
+                         )}
+                      </div>
+                      
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-3 royal-font">Title</label>
                         <input 
@@ -147,6 +257,24 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                           className="w-full bg-[#050505] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37]" 
                         />
                       </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-3 royal-font">Color</label>
+                        <div className="flex items-center gap-4">
+                           <input 
+                             type="color" 
+                             value={editingRole.color}
+                             onChange={(e) => {
+                                const updated = { ...editingRole, color: e.target.value };
+                                setEditingRole(updated);
+                                onUpdateServer({ roles: server.roles.map(r => r.id === editingRole.id ? updated : r) });
+                             }}
+                             className="w-12 h-12 p-1 bg-[#050505] border border-[#3d2b0f] cursor-pointer"
+                           />
+                           <span className="text-xs font-mono text-[#8a7038]">{editingRole.color}</span>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-4 royal-font">Privileges</label>
                         <div className="space-y-2">

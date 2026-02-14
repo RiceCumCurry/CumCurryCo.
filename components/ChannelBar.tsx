@@ -201,8 +201,16 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
             <div className="pb-2 px-1 uppercase text-[10px] font-bold text-[#5c4010] tracking-widest border-b border-[#3d2b0f] royal-font mb-4">
               Direct Couriers
             </div>
-            {friends.map(friend => (
-              <button key={friend.id} className="w-full flex items-center px-2 py-2 group hover:bg-[#111] transition-all mb-1 border-l-2 border-transparent hover:border-[#8a7038]">
+            {friends.map(friend => {
+              const dmId = `dm_${friend.id}`;
+              const isActive = activeChannelId === dmId;
+              
+              return (
+              <button 
+                key={friend.id} 
+                onClick={() => onChannelSelect(dmId)}
+                className={`w-full flex items-center px-2 py-2 group hover:bg-[#111] transition-all mb-1 border-l-2 ${isActive ? 'bg-[#1a1a1a] border-[#D4AF37]' : 'border-transparent hover:border-[#8a7038]'}`}
+              >
                 <div className="relative">
                   <img src={friend.avatar} alt={friend.username} className="w-8 h-8 rounded-full object-cover border border-[#3d2b0f] group-hover:border-[#8a7038]" />
                   <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#080808] ${
@@ -212,7 +220,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
                   }`} />
                 </div>
                 <div className="ml-3 flex-1 text-left overflow-hidden">
-                  <div className="text-[12px] font-bold text-[#8a7038] group-hover:text-[#D4AF37] truncate tracking-wide royal-font">{friend.username}</div>
+                  <div className={`text-[12px] font-bold truncate tracking-wide royal-font ${isActive ? 'text-[#D4AF37]' : 'text-[#8a7038] group-hover:text-[#D4AF37]'}`}>{friend.username}</div>
                   <div className="flex items-center gap-1.5 overflow-hidden">
                      <span className="text-[9px] text-[#5c4010] uppercase tracking-widest shrink-0">{friend.status === 'offline' ? 'Invisible' : friend.status}</span>
                      {friend.customStatus && (
@@ -221,7 +229,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
                   </div>
                 </div>
               </button>
-            ))}
+            )})}
           </div>
         )}
       </div>

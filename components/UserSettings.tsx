@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { ICONS } from '../constants';
 import MicVisualizer from './MicVisualizer';
-import { Dice5, Upload } from 'lucide-react';
+import { Dice5, Upload, Link as LinkIcon } from 'lucide-react';
 
 interface UserSettingsProps {
   user: User;
@@ -28,6 +28,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const handleSave = async () => {
     setError('');
@@ -76,12 +77,23 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
     setEditForm(prev => ({ ...prev, banner: gradient }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setEditForm(prev => ({ ...prev, avatar: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditForm(prev => ({ ...prev, banner: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -161,10 +173,41 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                    </div>
                    
                   {isEditing && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20">
-                       <button onClick={rollBanner} className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#D4AF37] royal-font border border-[#D4AF37] bg-black/80 px-4 py-2 hover:bg-[#D4AF37] hover:text-black transition-all">
-                         <Dice5 size={14} /> Gamble Banner
-                       </button>
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 gap-3">
+                       <div className="flex gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); bannerInputRef.current?.click(); }}
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#D4AF37] royal-font border border-[#D4AF37] bg-black/50 px-3 py-1.5 hover:bg-[#D4AF37] hover:text-black transition-all"
+                          >
+                            <Upload size={14} /> Upload
+                          </button>
+                          <button 
+                            onClick={rollBanner}
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#D4AF37] royal-font border border-[#D4AF37] bg-black/50 px-3 py-1.5 hover:bg-[#D4AF37] hover:text-black transition-all"
+                          >
+                            <Dice5 size={14} /> Random
+                          </button>
+                       </div>
+                       
+                       <div className="flex items-center gap-2 w-72 bg-black/50 border border-[#3d2b0f] px-2 focus-within:border-[#D4AF37] transition-colors">
+                          <LinkIcon size={12} className="text-[#8a7038] shrink-0" />
+                          <input
+                            type="text"
+                            placeholder="Or paste image/gif URL..."
+                            value={editForm.banner && !editForm.banner.startsWith('data:') && !editForm.banner.startsWith('linear-gradient') ? editForm.banner : ''}
+                            onChange={(e) => setEditForm(prev => ({...prev, banner: e.target.value}))}
+                            className="bg-transparent border-none text-[10px] text-[#F5F5DC] w-full py-2 focus:outline-none placeholder-[#5c4010]"
+                            onClick={e => e.stopPropagation()}
+                          />
+                       </div>
+
+                       <input 
+                         type="file" 
+                         ref={bannerInputRef} 
+                         className="hidden" 
+                         accept="image/gif, image/jpeg, image/png, image/webp" 
+                         onChange={handleBannerUpload}
+                       />
                     </div>
                   )}
                 </div>
@@ -188,8 +231,8 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                              type="file" 
                              ref={fileInputRef} 
                              className="hidden" 
-                             accept="image/*" 
-                             onChange={handleFileUpload}
+                             accept="image/gif, image/jpeg, image/png, image/webp" 
+                             onChange={handleAvatarUpload}
                            />
                         </div>
                       )}

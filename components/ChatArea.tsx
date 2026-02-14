@@ -11,10 +11,12 @@ interface ChatAreaProps {
   notifications: Notification[];
   allUsers: User[];
   server: Server | null;
+  isDM?: boolean;
   onSendMessage: (content: string) => void;
   onViewUser: (userId: string) => void;
   onAcceptFriendRequest: (userId: string, notificationId: string) => void;
   onRejectFriendRequest: (notificationId: string) => void;
+  onCall?: (type: 'VOICE' | 'VIDEO') => void;
 }
 
 const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉'];
@@ -26,10 +28,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   notifications,
   allUsers,
   server,
+  isDM = false,
   onSendMessage,
   onViewUser,
   onAcceptFriendRequest,
-  onRejectFriendRequest
+  onRejectFriendRequest,
+  onCall
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -172,11 +176,33 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <span className="text-[#8a7038] font-serif text-2xl">✦</span>
             <div className="flex flex-col">
                 <span className="royal-font font-bold text-[#D4AF37] uppercase tracking-widest text-lg">{channelName}</span>
-                <span className="text-[9px] text-[#5c4010] uppercase tracking-[0.2em] font-bold">Chamber of Discourse</span>
+                <span className="text-[9px] text-[#5c4010] uppercase tracking-[0.2em] font-bold">
+                  {isDM ? 'Private Correspondence' : 'Chamber of Discourse'}
+                </span>
             </div>
             </div>
             <div className="flex items-center gap-6 text-[#5c4010]">
             
+            {/* Private Call Buttons for DMs */}
+            {isDM && onCall && (
+                <div className="flex items-center gap-4 border-r border-[#3d2b0f] pr-6">
+                    <button 
+                        onClick={() => onCall('VOICE')}
+                        className="hover:text-[#D4AF37] hover:scale-110 transition-all"
+                        title="Voice Call"
+                    >
+                        {ICONS.Phone}
+                    </button>
+                    <button 
+                        onClick={() => onCall('VIDEO')}
+                        className="hover:text-[#D4AF37] hover:scale-110 transition-all"
+                        title="Video Call"
+                    >
+                        {ICONS.Video}
+                    </button>
+                </div>
+            )}
+
             {/* Notifications */}
             <div className="relative">
                 <button 
@@ -231,14 +257,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 )}
             </div>
 
-            <button 
-               onClick={() => setShowMembers(!showMembers)}
-               className={`hover:text-[#D4AF37] transition-colors ${showMembers ? 'text-[#D4AF37]' : ''}`}
-            >
-                {ICONS.Users}
-            </button>
-            <div className="w-[1px] h-6 bg-[#3d2b0f]" />
-            <button className="hover:text-[#D4AF37] transition-colors">{ICONS.Settings}</button>
+            {!isDM && (
+                <button 
+                onClick={() => setShowMembers(!showMembers)}
+                className={`hover:text-[#D4AF37] transition-colors ${showMembers ? 'text-[#D4AF37]' : ''}`}
+                >
+                    {ICONS.Users}
+                </button>
+            )}
+            {!isDM && <div className="w-[1px] h-6 bg-[#3d2b0f]" />}
+            {!isDM && <button className="hover:text-[#D4AF37] transition-colors">{ICONS.Settings}</button>}
             </div>
         </div>
 
@@ -249,13 +277,15 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 <div className="w-20 h-20 rounded-full border border-[#D4AF37] flex items-center justify-center mx-auto mb-6 bg-black shadow-[0_0_30px_rgba(212,175,55,0.2)]">
                     <span className="text-3xl text-[#D4AF37]">✦</span>
                 </div>
-                <h1 className="text-4xl royal-font font-bold text-[#D4AF37] mb-2 uppercase tracking-widest">Welcome to {channelName}</h1>
+                <h1 className="text-4xl royal-font font-bold text-[#D4AF37] mb-2 uppercase tracking-widest">
+                  {isDM ? `Conversation with ${channelName}` : `Welcome to ${channelName}`}
+                </h1>
                 <p className="text-[#8a7038] font-medium text-sm tracking-wide">The archives of this conversation begin here.</p>
             </div>
             </div>
 
             {messages.map((msg) => {
-            const senderRole = getHighestRole(msg.userId);
+            const senderRole = !isDM ? getHighestRole(msg.userId) : null;
             const isMention = msg.content.includes(`@${currentUser?.username}`) || msg.content.includes('@everyone');
             
             return (
@@ -363,7 +393,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <input
                 ref={inputRef}
                 type="text"
-                placeholder={`Inscribe upon #${channelName}...`}
+                placeholder={isDM ? `Message @${channelName}` : `Inscribe upon #${channelName}...`}
                 className="flex-1 bg-transparent border-none outline-none text-[#F5F5DC] placeholder-[#3d2b0f] font-medium text-[15px] royal-font"
                 value={inputValue}
                 onChange={handleInputChange}
@@ -387,8 +417,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
         </div>
 
-        {/* Member List Sidebar */}
-        {showMembers && (
+        {/* Member List Sidebar - Only show for servers */}
+        {showMembers && !isDM && (
             <div className="w-64 bg-[#080808] border-l border-[#3d2b0f] flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20">
                 <div className="p-4 border-b border-[#3d2b0f] bg-[#050505]">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] royal-font">
