@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Message, User, Notification, Server, Role } from '../types';
-import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus, Menu } from 'lucide-react';
+import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus, Menu, LogIn } from 'lucide-react';
 import ForwardModal from './ForwardModal';
 
 interface ChatAreaProps {
@@ -24,6 +24,7 @@ interface ChatAreaProps {
   onCall?: (type: 'VOICE' | 'VIDEO') => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   onToggleMobileMenu: () => void;
+  onJoinServer?: (link: string) => void; // New prop
 }
 
 const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉', '👍', '👎', '❤️', '😂'];
@@ -46,7 +47,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onRejectFriendRequest,
   onCall,
   onAddReaction,
-  onToggleMobileMenu
+  onToggleMobileMenu,
+  onJoinServer
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -133,6 +135,39 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const showEveryoneOption = mentionQuery !== null && 'everyone'.includes(mentionQuery);
 
   const renderMessageContent = (content: string) => {
+    const inviteRegex = /(https?:\/\/)?(www\.)?cumcurry\.co\/invite\/([a-zA-Z0-9_-]+)/g;
+    
+    // Split content by invite links to inject special components
+    const parts = content.split(inviteRegex);
+    const matches = content.match(inviteRegex);
+
+    if (matches && onJoinServer) {
+        return (
+            <div className="flex flex-col gap-1 items-start">
+               <span>
+                 {content.split(inviteRegex).filter((part, index) => {
+                    // Filter out the capture groups from regex split that aren't the main text
+                    // This is a rough split logic simplification for React rendering
+                    return !part.startsWith('http') && part !== 'www.' && !matches.some(m => m.includes(part));
+                 }).join(' ')}
+               </span>
+               {matches.map((link, i) => (
+                   <div key={i} className="mt-2 p-3 bg-theme-panel border border-theme-gold/50 rounded-lg max-w-sm w-full">
+                       <div className="text-[10px] uppercase font-bold text-theme-text-dim tracking-widest mb-1 royal-font">Official Decree</div>
+                       <div className="text-sm font-bold text-theme-gold mb-2">Realm Invitation</div>
+                       <div className="text-xs text-theme-text-muted mb-3 truncate font-mono bg-black/30 p-1 rounded">{link}</div>
+                       <button 
+                         onClick={() => onJoinServer(link)}
+                         className="w-full py-2 bg-theme-gold text-black text-xs font-bold uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2 royal-font"
+                       >
+                           <LogIn size={14} /> Accept Invite
+                       </button>
+                   </div>
+               ))}
+            </div>
+        );
+    }
+
     return content.split(/(\s+)/).map((word, i) => {
         if (word === '@everyone') {
             return <span key={i} className="bg-theme-gold/20 text-theme-gold px-1 rounded font-bold cursor-default">@everyone</span>;
@@ -151,6 +186,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     </span>
                 );
             }
+        }
+        // Basic Link Detection
+        if (word.match(/^https?:\/\//)) {
+             return <a key={i} href={word} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">{word}</a>;
         }
         return word;
     });
@@ -419,9 +458,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         </div>
                     )}
 
-                    <p className="text-theme-text leading-relaxed font-light text-[15px] font-sans tracking-wide break-words">
+                    <div className="text-theme-text leading-relaxed font-light text-[15px] font-sans tracking-wide break-words">
                         {renderMessageContent(msg.content)}
-                    </p>
+                    </div>
 
                     {/* Reactions Display */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
@@ -452,7 +491,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="h-4" />
         </div>
 
-        {/* Input */}
+        {/* Input - (Standard input section remains same) */}
         <div className="px-4 md:px-8 pb-8 pt-4 bg-gradient-to-t from-theme-bg to-transparent relative shrink-0">
             {/* Mention Autocomplete */}
             {mentionQuery !== null && (filteredUsers.length > 0 || showEveryoneOption) && (

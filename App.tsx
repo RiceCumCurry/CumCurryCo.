@@ -81,34 +81,38 @@ const App: React.FC = () => {
   });
 
   const [newServerName, setNewServerName] = useState('');
-  const [joinServerQuery, setJoinServerQuery] = useState(''); // New: Input for joining
-  const [createMode, setCreateMode] = useState<'create' | 'join'>('create'); // New: Toggle between create/join
+  const [joinServerQuery, setJoinServerQuery] = useState(''); 
+  const [createMode, setCreateMode] = useState<'create' | 'join'>('create');
   const [newChannelName, setNewChannelName] = useState('');
   const [createChannelType, setCreateChannelType] = useState<ChannelType>(ChannelType.TEXT);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [friendSearchResults, setFriendSearchResults] = useState<User[] | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Helper to force refresh DB reads
+  const [refreshKey, setRefreshKey] = useState(0); 
 
   // Initial Seeding & Socket
   useEffect(() => {
-    // Seed Users if empty
+    // Merge Seed Users into DB if missing
     const usersDB = getUsersDB();
-    if (Object.keys(usersDB).length === 0) {
-        SEED_USERS.forEach(user => {
+    let usersUpdated = false;
+    SEED_USERS.forEach(user => {
+        if (!usersDB[user.email]) {
             usersDB[user.email] = { email: user.email, password: 'password', user };
-        });
-        saveUsersDB(usersDB);
-    }
+            usersUpdated = true;
+        }
+    });
+    if (usersUpdated) saveUsersDB(usersDB);
 
-    // Seed Servers if empty
+    // Merge Seed Servers into DB if missing
     const serversDB = getServersDB();
-    if (Object.keys(serversDB).length === 0) {
-        SEED_SERVERS.forEach(server => {
+    let serversUpdated = false;
+    SEED_SERVERS.forEach(server => {
+        if (!serversDB[server.id]) {
             serversDB[server.id] = server;
-        });
-        saveServersDB(serversDB);
-    }
+            serversUpdated = true;
+        }
+    });
+    if (serversUpdated) saveServersDB(serversDB);
 
     // Connect to socket
     socket.connect();
@@ -559,24 +563,28 @@ const App: React.FC = () => {
     setNewServerName('');
   };
 
-  // Join server via ID or search
-  const handleJoinServer = () => {
-      if (!joinServerQuery.trim()) return;
+  // Join server via ID, Search, or Link
+  const handleJoinServer = (queryOverride?: string) => {
+      const query = queryOverride || joinServerQuery;
+      if (!query.trim()) return;
       const db = getServersDB();
       const allServers = Object.values(db);
       
       // Try ID match first (parse link or direct ID)
-      const potentialId = joinServerQuery.split('/').pop() || joinServerQuery;
+      const potentialId = query.split('/').pop() || query;
       let targetServer = db[potentialId];
 
       // If not found, try name search
       if (!targetServer) {
-          targetServer = allServers.find(s => s.name.toLowerCase() === joinServerQuery.toLowerCase());
+          targetServer = allServers.find(s => s.name.toLowerCase() === query.toLowerCase());
       }
 
       if (targetServer) {
           if (state.servers.some(s => s.id === targetServer.id)) {
-              alert("You have already sworn allegiance to this realm.");
+              // Already joined, just switch to it
+              handleServerSelect(targetServer.id);
+              setState(prev => ({ ...prev, isCreateServerOpen: false }));
+              setJoinServerQuery('');
               return;
           }
           joinServer(targetServer);
@@ -596,7 +604,7 @@ const App: React.FC = () => {
       if (serverInDb) {
           // Add default role if any, or just add to members
           serverInDb.memberJoinedAt[state.currentUser.id] = Date.now();
-          // Find default role? For now none.
+          
           saveServersDB(db);
           
           setState(prev => ({
@@ -670,7 +678,8 @@ const App: React.FC = () => {
   const allServers = Object.values(getServersDB());
   // If no servers in DB yet, fallback to seed
   const potentialServers = allServers.length > 0 ? allServers : SEED_SERVERS;
-  const publicServers = potentialServers.filter(s => s.isPublic && !s.memberRoles[state.currentUser!.id] && s.ownerId !== state.currentUser!.id);
+  // Show all public servers, regardless of membership (for visual confirmation)
+  const publicServers = potentialServers.filter(s => s.isPublic);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-theme-bg text-theme-text select-none antialiased font-['Inter']">
@@ -719,7 +728,9 @@ const App: React.FC = () => {
               <h1 className="text-2xl md:text-4xl royal-font font-bold mb-6 md:mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
               {publicServers.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-                    {publicServers.map(server => (
+                    {publicServers.map(server => {
+                        const isMember = state.servers.some(s => s.id === server.id);
+                        return (
                       <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
                         <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="relative h-32 md:h-40 mb-4 overflow-hidden bg-black">
@@ -732,18 +743,27 @@ const App: React.FC = () => {
                              <h3 className="font-bold text-lg mb-1 uppercase tracking-wide text-theme-gold-light royal-font truncate">{server.name}</h3>
                              <p className="text-xs text-theme-text-dim mb-4">{Object.keys(server.memberJoinedAt).length} Members</p>
                         </div>
-                        <button 
-                            onClick={() => joinServer(server)} 
-                            className="w-full py-3 bg-theme-panel border border-theme-border text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto"
-                        >
-                            Pledge Loyalty
-                        </button>
+                        {isMember ? (
+                            <button 
+                                onClick={() => handleServerSelect(server.id)}
+                                className="w-full py-3 bg-white/5 border border-theme-gold text-theme-gold font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto hover:bg-theme-gold hover:text-black"
+                            >
+                                Enter Realm
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => joinServer(server)} 
+                                className="w-full py-3 bg-theme-panel border border-theme-border text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto"
+                            >
+                                Pledge Loyalty
+                            </button>
+                        )}
                       </div>
-                    ))}
+                    )})}
                   </div>
               ) : (
                   <div className="flex items-center justify-center h-64 text-theme-text-muted text-lg italic">
-                     No undiscovered public realms found.
+                     No public realms found.
                   </div>
               )}
             </div>
@@ -767,6 +787,7 @@ const App: React.FC = () => {
               onCall={isDM ? (type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any })) : undefined}
               onAddReaction={handleAddReaction}
               onToggleMobileMenu={() => setShowMobileMenu(true)}
+              onJoinServer={(link) => handleJoinServer(link)} // NEW: Handle link joins
             />
           ) : (
             <div className="flex-1 flex items-center justify-center p-8 bg-theme-bg mandala-bg relative">
@@ -863,13 +884,14 @@ const App: React.FC = () => {
                         <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Invite Link or Server Name" value={joinServerQuery} onChange={e => setJoinServerQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJoinServer()} />
                         <div className="flex justify-end gap-4">
                         <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
-                        <button onClick={handleJoinServer} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Join</button>
+                        <button onClick={() => handleJoinServer()} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Join</button>
                         </div>
                     </>
                 )}
               </>
             )}
             
+            {/* ... other modals (createChannel, addFriend) remain the same ... */}
             {state.isCreateChannelOpen && (
               <>
                 <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New {createChannelType === ChannelType.TEXT ? 'Chamber' : 'Sanctuary'}</h2>
