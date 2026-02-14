@@ -46,6 +46,7 @@ export interface Server {
   name: string;
   icon: string;
   banner?: string; // New: Server Banner
+  isPublic?: boolean; // New: Discoverable status
   channels: Channel[];
   ownerId: string;
   roles: Role[];

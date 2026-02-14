@@ -4,7 +4,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true, // Listens on 0.0.0.0, enabling access via LAN IP
-    port: 3000
+    host: true, // Listen on 0.0.0.0
+    port: 3000,
+    proxy: {
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        ws: true,
+        changeOrigin: true
+      }
+    }
   }
 });

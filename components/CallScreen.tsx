@@ -5,12 +5,13 @@ import { ChannelType, User } from '../types';
 import { Maximize2, Minimize2, MessageSquare } from 'lucide-react';
 
 interface CallScreenProps {
+  currentUser: User;
   type: ChannelType;
   participants: User[];
   onDisconnect: () => void;
 }
 
-const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnect }) => {
+const CallScreen: React.FC<CallScreenProps> = ({ currentUser, type, participants, onDisconnect }) => {
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(type === ChannelType.VIDEO);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -144,7 +145,12 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
         </div>
 
         {/* Participants Grid */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-center content-center">
+        <div className={`flex-1 grid gap-6 items-center content-center ${
+            participants.length === 0 ? 'grid-cols-1' : 
+            participants.length === 1 ? 'grid-cols-1 md:grid-cols-2' : 
+            'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+        }`}>
+          {/* Current User Card */}
           {isVideoOn || isScreenSharing ? (
             <div className="relative rounded-3xl overflow-hidden bg-zinc-900 h-full max-h-[600px] border-2 border-orange-500/30 shadow-[0_0_50px_rgba(249,115,22,0.1)] group">
               <video 
@@ -159,16 +165,20 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-[3rem] bg-zinc-900 border border-zinc-800/50 h-full max-h-[600px] shadow-2xl">
-              <div className="relative">
-                 <img src="https://picsum.photos/seed/you/200/200" className="w-40 h-40 rounded-[2.5rem] border-4 border-orange-500 shadow-2xl object-cover" />
+            <div className="flex flex-col items-center justify-center rounded-[3rem] bg-zinc-900 border border-zinc-800/50 h-full max-h-[600px] shadow-2xl relative overflow-hidden">
+               {/* Background blur of avatar */}
+               <img src={currentUser.avatar} className="absolute inset-0 w-full h-full object-cover opacity-10 blur-xl" />
+               
+              <div className="relative z-10">
+                 <img src={currentUser.avatar} className="w-40 h-40 rounded-[2.5rem] border-4 border-orange-500 shadow-2xl object-cover" />
                  <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 rounded-full border-4 border-zinc-900 flex items-center justify-center">
-                    <span className="scale-75">{ICONS.Mic}</span>
+                    <span className="scale-75 text-black">{isMicOn ? ICONS.Mic : ICONS.MicOff}</span>
                  </div>
               </div>
-              <div className="mt-8 text-2xl font-black uppercase tracking-tighter italic">You</div>
-              <div className="mt-2 text-green-500 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest">
-                <span className="animate-pulse w-2 h-2 bg-green-500 rounded-full" /> Transmission Active
+              <div className="mt-8 text-2xl font-black uppercase tracking-tighter italic text-white relative z-10">{currentUser.username} (You)</div>
+              <div className="mt-2 text-green-500 flex items-center gap-2 font-black text-[10px] uppercase tracking-widest relative z-10">
+                <span className={`w-2 h-2 rounded-full ${isMicOn ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} /> 
+                {isMicOn ? 'Transmission Active' : 'Muted'}
               </div>
             </div>
           )}
@@ -180,10 +190,16 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
               <div className="mt-2 text-zinc-700 font-black text-[10px] uppercase tracking-widest italic">Silent Zone</div>
             </div>
           ))}
+
+          {participants.length === 0 && (
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-48 text-center opacity-50 pointer-events-none">
+                <div className="text-theme-text-muted text-xs uppercase tracking-widest animate-pulse">Waiting for allies to join...</div>
+             </div>
+          )}
         </div>
 
         {/* Controls */}
-        <div className="h-24 bg-zinc-900/80 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center gap-6 px-12 border border-zinc-800/50 shadow-2xl self-center mb-6">
+        <div className="h-24 bg-zinc-900/80 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center gap-6 px-12 border border-zinc-800/50 shadow-2xl self-center mb-6 z-10">
           <button 
             onClick={() => setIsMicOn(!isMicOn)}
             className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shadow-lg ${

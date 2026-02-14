@@ -424,20 +424,24 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     {/* Reactions Display */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                            {Object.entries(msg.reactions).map(([emoji, userIds]) => (
+                            {Object.entries(msg.reactions).map(([emoji, userIds]) => {
+                                // Explicitly cast userIds to string[] to resolve type errors
+                                const ids = userIds as string[];
+                                return (
                                 <button
                                     key={emoji}
                                     onClick={() => onAddReaction(msg.id, emoji)}
                                     className={`px-1.5 py-0.5 rounded border text-[10px] flex items-center gap-1 transition-all ${
-                                        userIds.includes(currentUser?.id || '') 
+                                        ids.includes(currentUser?.id || '') 
                                             ? 'bg-theme-gold/10 border-theme-gold text-theme-gold' 
                                             : 'bg-white/5 border-transparent hover:border-theme-text-muted text-theme-text-muted'
                                     }`}
                                 >
                                     <span>{emoji}</span>
-                                    <span className="font-bold">{userIds.length}</span>
+                                    <span className="font-bold">{ids.length}</span>
                                 </button>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

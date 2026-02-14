@@ -11,11 +11,25 @@ import ServerSettings from './components/ServerSettings';
 import UserSettings from './components/UserSettings';
 import ServerInfoModal from './components/ServerInfoModal';
 import UserProfileModal from './components/UserProfileModal';
+import { socket } from './services/socket';
 
 // Database Helper functions
 const getUsersDB = () => {
   const db = localStorage.getItem('cc_users_db');
   return db ? JSON.parse(db) : {};
+};
+
+const getServersDB = (): Record<string, Server> => {
+    const db = localStorage.getItem('cc_servers_db');
+    return db ? JSON.parse(db) : {};
+};
+
+const saveServersDB = (db: Record<string, Server>) => {
+    try {
+        localStorage.setItem('cc_servers_db', JSON.stringify(db));
+    } catch (e) {
+        console.error("Server storage quota exceeded", e);
+    }
 };
 
 const getReservedUsernames = () => {
@@ -43,39 +57,12 @@ const saveReservedUsernames = (db: any) => {
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
     currentUser: null,
-    servers: MOCK_SERVERS.map(s => ({
-        ...s,
-        ownerId: 'u2',
-        theme: 'royal',
-        banner: 'https://picsum.photos/seed/server_banner/800/200',
-        createdAt: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
-        roles: [
-            { id: 'r1', name: 'admin', color: '#D4AF37', icon: '👑', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
-            { id: 'r2', name: 'moderator', color: '#B8860B', icon: '🛡️', permissions: ['MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
-            { id: 'r3', name: 'member', color: '#A9A9A9', icon: '⚔️', permissions: ['SEND_MESSAGES'] }
-        ],
-        memberRoles: {
-            'u2': ['r1'],
-            'u3': ['r2'],
-            'u4': ['r3']
-        },
-        memberJoinedAt: {
-          'u2': Date.now() - 1000 * 60 * 60 * 24 * 30,
-          'u3': Date.now() - 1000 * 60 * 60 * 24 * 10,
-          'u4': Date.now() - 1000 * 60 * 60 * 24 * 2,
-        }
-    })),
-    activeServerId: 's1',
-    activeChannelId: 'c1',
-    messages: {
-        'c1': [{ id: 'm1', userId: 'u2', content: 'Peace be upon this realm.', timestamp: Date.now() - 100000, reactions: { '🔥': ['u3'] } }],
-        'c2': [{ id: 'm2', userId: 'u3', content: 'Anyone wish to engage in combat?', timestamp: Date.now() - 50000 }]
-    },
-    friends: MOCK_FRIENDS,
-    notifications: [
-        { id: 'n1', type: 'SYSTEM', content: 'Welcome to CumCurry, noble traveler.', read: false, timestamp: Date.now() },
-        { id: 'n2', type: 'FRIEND_REQUEST', content: 'FragMaster wishes to form an alliance.', fromUserId: 'u3', read: false, timestamp: Date.now() - 10000 }
-    ],
+    servers: [],
+    activeServerId: null,
+    activeChannelId: null,
+    messages: {},
+    friends: [],
+    notifications: [],
     viewingUserId: null,
     isCallActive: false,
     callType: null,
@@ -94,6 +81,59 @@ const App: React.FC = () => {
 
   const [newServerName, setNewServerName] = useState('');
   const [newChannelName, setNewChannelName] = useState('');
+  const [createChannelType, setCreateChannelType] = useState<ChannelType>(ChannelType.TEXT);
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [friendSearchResults, setFriendSearchResults] = useState<User[] | null>(null);
+
+  // Socket Integration
+  useEffect(() => {
+    // Connect to socket
+    socket.connect();
+
+    // Listen for incoming messages
+    socket.on('new_message', (data: { channelId: string, message: Message }) => {
+      setState(prev => {
+        const { channelId, message } = data;
+        const currentMessages = prev.messages[channelId] || [];
+        
+        // Avoid duplicates
+        if (currentMessages.some(m => m.id === message.id)) return prev;
+
+        return {
+          ...prev,
+          messages: {
+            ...prev.messages,
+            [channelId]: [...currentMessages, message]
+          }
+        };
+      });
+    });
+
+    // Listen for history
+    socket.on('history', (data: { channelId: string, messages: Message[] }) => {
+        setState(prev => ({
+            ...prev,
+            messages: {
+                ...prev.messages,
+                [data.channelId]: data.messages
+            }
+        }));
+    });
+
+    return () => {
+      socket.off('new_message');
+      socket.off('history');
+      socket.disconnect();
+    };
+  }, []);
+
+  // Join channel room on switch
+  useEffect(() => {
+    if (state.activeChannelId) {
+        socket.emit('join_channel', state.activeChannelId);
+    }
+  }, [state.activeChannelId]);
+
 
   // Sync theme: Server Theme > User Profile Theme > Default
   useEffect(() => {
@@ -142,26 +182,62 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Load User and Servers on Mount
   useEffect(() => {
     const savedUser = localStorage.getItem('cc_user');
     if (savedUser) {
-      const parsed = JSON.parse(savedUser);
+      const parsedUser = JSON.parse(savedUser);
+      
+      // Load servers related to this user
+      const db = getServersDB();
+      const userServers = Object.values(db).filter(s => 
+          s.memberRoles[parsedUser.id] || s.ownerId === parsedUser.id
+      );
+
       setState(prev => ({ 
           ...prev, 
-          currentUser: parsed,
-          servers: prev.servers.map(s => s.id === 's1' ? { ...s, ownerId: parsed.id } : s)
+          currentUser: parsedUser,
+          servers: userServers
       }));
     }
   }, []);
 
+  // Modal ESC Listener
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'Escape') {
+              if (state.isCreateServerOpen) setState(p => ({...p, isCreateServerOpen: false}));
+              if (state.isCreateChannelOpen) setState(p => ({...p, isCreateChannelOpen: false}));
+              if (state.isAddFriendOpen) {
+                  setState(p => ({...p, isAddFriendOpen: false}));
+                  setFriendSearchResults(null);
+                  setFriendSearchQuery('');
+              }
+              if (state.isExploreOpen) setState(p => ({...p, isExploreOpen: false}));
+              if (state.isServerInfoOpen) setState(p => ({...p, isServerInfoOpen: false}));
+              if (state.viewingUserId) setState(p => ({...p, viewingUserId: null}));
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state.isCreateServerOpen, state.isCreateChannelOpen, state.isAddFriendOpen, state.isExploreOpen, state.isServerInfoOpen, state.viewingUserId]);
+
+
   const handleLogin = (user: User) => {
     localStorage.setItem('cc_user', JSON.stringify(user));
-    setState(prev => ({ ...prev, currentUser: user, servers: prev.servers.map(s => ({ ...s, ownerId: user.id })) }));
+    
+    // Load servers
+    const db = getServersDB();
+    const userServers = Object.values(db).filter(s => 
+        s.memberRoles[user.id] || s.ownerId === user.id
+    );
+
+    setState(prev => ({ ...prev, currentUser: user, servers: userServers }));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('cc_user');
-    setState(prev => ({ ...prev, currentUser: null, isUserSettingsOpen: false }));
+    setState(prev => ({ ...prev, currentUser: null, isUserSettingsOpen: false, servers: [] }));
   };
 
   const handleUpdateUser = async (updates: Partial<User>): Promise<boolean | string> => {
@@ -259,35 +335,19 @@ const App: React.FC = () => {
       }
 
       const newMessage: Message = {
-          id: 'm' + Date.now(),
+          id: 'm' + Date.now() + Math.random().toString(36).substr(2, 9),
           userId: state.currentUser.id,
           content,
           timestamp: Date.now(),
-          replyToId, // Add reply ID
+          replyToId,
           reactions: {} 
       };
       
-      // Simulate mention notification for demo
-      let newNotifications = [...state.notifications];
-      if (content.includes('@')) {
-          newNotifications.push({
-              id: 'n' + Date.now(),
-              type: 'MENTION',
-              content: `${state.currentUser.username} mentioned you in #${activeChannel?.name || 'DM'}`,
-              fromUserId: state.currentUser.id,
-              read: false,
-              timestamp: Date.now()
-          });
-      }
-
-      setState(prev => ({
-          ...prev,
-          messages: {
-              ...prev.messages,
-              [prev.activeChannelId!]: [...(prev.messages[prev.activeChannelId!] || []), newMessage]
-          },
-          notifications: newNotifications
-      }));
+      // Send to server instead of local state update
+      socket.emit('send_message', {
+          channelId: state.activeChannelId,
+          message: newMessage
+      });
   };
 
   const handleAddReaction = (messageId: string, emoji: string) => {
@@ -302,10 +362,8 @@ const App: React.FC = () => {
                 let newUsers = [];
                 
                 if (users.includes(state.currentUser!.id)) {
-                    // Remove reaction
                     newUsers = users.filter(id => id !== state.currentUser!.id);
                 } else {
-                    // Add reaction
                     newUsers = [...users, state.currentUser!.id];
                 }
 
@@ -355,15 +413,44 @@ const App: React.FC = () => {
           reactions: {}
       };
 
-      setState(prev => ({
-          ...prev,
-          messages: {
-              ...prev.messages,
-              [targetId]: [...(prev.messages[targetId] || []), newMessage]
-          }
-      }));
+      socket.emit('send_message', {
+          channelId: targetId,
+          message: newMessage
+      });
       
       alert(`Message forwarded to target.`);
+  };
+
+  const handleSearchFriends = () => {
+    if (!friendSearchQuery.trim()) return;
+    
+    const db = getUsersDB();
+    const results = Object.values(db)
+        .map((record: any) => record.user)
+        .filter((u: User) => u.username.toLowerCase().includes(friendSearchQuery.toLowerCase()));
+
+    setFriendSearchResults(results);
+  };
+
+  const handleAddFriend = (targetUser: User) => {
+    if (state.currentUser && targetUser.id === state.currentUser.id) {
+        alert("You cannot ally with yourself.");
+        return;
+    }
+    
+    if (state.friends.some(f => f.id === targetUser.id)) {
+        alert("Already allied.");
+        return;
+    }
+
+    setState(prev => ({
+        ...prev,
+        friends: [...prev.friends, targetUser],
+        isAddFriendOpen: false
+    }));
+    setFriendSearchResults(null);
+    setFriendSearchQuery('');
+    alert(`Alliance formed with ${targetUser.username}.`);
   };
 
   const handleSendFriendRequest = (toUserId: string) => {
@@ -395,9 +482,18 @@ const App: React.FC = () => {
 
   const updateActiveServer = (updates: Partial<Server>) => {
       if (!state.activeServerId) return;
+      
+      const db = getServersDB();
+      const currentServer = db[state.activeServerId];
+      if (!currentServer) return;
+
+      const updatedServer = { ...currentServer, ...updates };
+      db[state.activeServerId] = updatedServer;
+      saveServersDB(db);
+
       setState(prev => ({
           ...prev,
-          servers: prev.servers.map(s => s.id === prev.activeServerId ? { ...s, ...updates } : s)
+          servers: prev.servers.map(s => s.id === prev.activeServerId ? updatedServer : s)
       }));
   };
 
@@ -411,6 +507,7 @@ const App: React.FC = () => {
       ownerId: state.currentUser.id,
       createdAt: Date.now(),
       theme: 'royal',
+      isPublic: false, // Default private
       roles: [{ id: 'r_owner', name: 'Monarch', color: '#D4AF37', icon: '👑', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] }],
       memberRoles: { [state.currentUser.id]: ['r_owner'] },
       memberJoinedAt: { [state.currentUser.id]: Date.now() },
@@ -418,6 +515,12 @@ const App: React.FC = () => {
         { id: 'c' + Date.now(), name: 'throne-room', type: ChannelType.TEXT }
       ]
     };
+
+    // Save to DB
+    const db = getServersDB();
+    db[newServer.id] = newServer;
+    saveServersDB(db);
+
     setState(prev => ({
       ...prev,
       servers: [...prev.servers, newServer],
@@ -428,19 +531,51 @@ const App: React.FC = () => {
     setNewServerName('');
   };
 
+  const joinServer = (server: Server) => {
+      if (!state.currentUser) return;
+      
+      // Update DB
+      const db = getServersDB();
+      const serverInDb = db[server.id];
+      if (serverInDb) {
+          // Add default role if any, or just add to members
+          serverInDb.memberJoinedAt[state.currentUser.id] = Date.now();
+          // Find default role? For now none.
+          saveServersDB(db);
+          
+          setState(prev => ({
+              ...prev,
+              servers: [...prev.servers, serverInDb],
+              activeServerId: server.id,
+              activeChannelId: serverInDb.channels[0]?.id || null,
+              isExploreOpen: false
+          }));
+      }
+  };
+
   const createChannel = () => {
     if (!newChannelName.trim() || !state.activeServerId) return;
+    
     const newChannel: Channel = {
       id: 'c' + Date.now(),
       name: newChannelName.toLowerCase().replace(/\s+/g, '-'),
-      type: ChannelType.TEXT
+      type: createChannelType
     };
-    setState(prev => ({
-      ...prev,
-      servers: prev.servers.map(s => s.id === prev.activeServerId ? { ...s, channels: [...s.channels, newChannel] } : s),
-      isCreateChannelOpen: false,
-      activeChannelId: newChannel.id
-    }));
+
+    // Update DB
+    const db = getServersDB();
+    const currentServer = db[state.activeServerId];
+    if (currentServer) {
+        currentServer.channels.push(newChannel);
+        saveServersDB(db);
+
+        setState(prev => ({
+            ...prev,
+            servers: prev.servers.map(s => s.id === prev.activeServerId ? currentServer : s),
+            isCreateChannelOpen: false,
+            activeChannelId: newChannel.id
+        }));
+    }
     setNewChannelName('');
   };
 
@@ -463,6 +598,21 @@ const App: React.FC = () => {
   if (!state.currentUser) {
     return <Auth onLogin={handleLogin} />;
   }
+
+  // Helper to get active call participants (excluding self)
+  const getCallParticipants = () => {
+      if (!state.activeChannelId) return [];
+      
+      if (state.activeChannelId.startsWith('dm_')) {
+          const friendId = state.activeChannelId.replace('dm_', '');
+          return state.friends.filter(f => f.id === friendId);
+      }
+      return [];
+  };
+
+  // Explore Logic
+  const allServers = Object.values(getServersDB());
+  const publicServers = allServers.filter(s => s.isPublic && !s.memberRoles[state.currentUser!.id] && s.ownerId !== state.currentUser!.id);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-theme-bg text-theme-text select-none antialiased font-['Inter']">
@@ -487,27 +637,47 @@ const App: React.FC = () => {
           ping={state.ping}
           connectionStatus={state.connectionStatus}
           onSettingsChange={(settings) => setState(prev => ({ ...prev, ...settings }))}
-          onCreateChannel={() => setState(prev => ({ ...prev, isCreateChannelOpen: true }))}
+          onCreateChannel={(type) => { setCreateChannelType(type); setState(prev => ({ ...prev, isCreateChannelOpen: true })); }}
           onOpenSettings={() => setState(prev => ({ ...prev, isServerSettingsOpen: true }))}
           onOpenServerInfo={() => setState(prev => ({ ...prev, isServerInfoOpen: true }))}
           onOpenUserSettings={() => setState(prev => ({ ...prev, isUserSettingsOpen: true }))}
           onUpdateUser={handleUpdateUser}
+          onAddFriend={() => setState(prev => ({ ...prev, isAddFriendOpen: true }))}
         />
         
         <main className="flex-1 flex flex-col relative bg-theme-bg">
           {state.isExploreOpen ? (
             <div className="flex-1 overflow-y-auto p-12 custom-scrollbar animate-in fade-in duration-300 mandala-bg">
               <h1 className="text-4xl royal-font font-bold mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                {['Royal Guard', 'Arcane Sanctum', 'Merchants Guild', 'Gladiator Pit'].map(name => (
-                  <div key={name} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <img src={`https://picsum.photos/seed/${name}/400/200`} className="w-full h-40 object-cover mb-4 sepia-[0.5] group-hover:sepia-0 transition-all" />
-                    <h3 className="font-bold text-lg mb-2 uppercase tracking-wide text-theme-gold-light royal-font">{name}</h3>
-                    <button onClick={() => { setNewServerName(name); createServer(); setState(prev => ({ ...prev, isExploreOpen: false })); }} className="w-full py-3 bg-theme-panel text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font">Pledge Loyalty</button>
+              {publicServers.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {publicServers.map(server => (
+                      <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative h-40 mb-4 overflow-hidden bg-black">
+                            <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover sepia-[0.5] group-hover:sepia-0 transition-all opacity-80" />
+                            <div className="absolute bottom-[-20px] left-4">
+                                <img src={server.icon} className="w-16 h-16 rounded-full border-4 border-theme-panel object-cover shadow-lg" />
+                            </div>
+                        </div>
+                        <div className="mt-4 flex-1">
+                             <h3 className="font-bold text-lg mb-1 uppercase tracking-wide text-theme-gold-light royal-font truncate">{server.name}</h3>
+                             <p className="text-xs text-theme-text-dim mb-4">{Object.keys(server.memberJoinedAt).length} Members</p>
+                        </div>
+                        <button 
+                            onClick={() => joinServer(server)} 
+                            className="w-full py-3 bg-theme-panel border border-theme-border text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font mt-auto"
+                        >
+                            Pledge Loyalty
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+              ) : (
+                  <div className="flex items-center justify-center h-64 text-theme-text-muted text-lg italic">
+                     No undiscovered public realms found.
+                  </div>
+              )}
             </div>
           ) : (activeChannel || isDM) ? (
             <ChatArea 
@@ -585,8 +755,9 @@ const App: React.FC = () => {
       {/* Basic Modals */}
       {(state.isCreateServerOpen || state.isCreateChannelOpen || state.isAddFriendOpen) && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-theme-panel border border-theme-border p-10 shadow-2xl relative">
+          <div className="w-full max-w-md bg-theme-panel border border-theme-border p-10 shadow-2xl relative" onClick={e => e.stopPropagation()}>
              <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold" />
+            
             {state.isCreateServerOpen && (
               <>
                 <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Dominion</h2>
@@ -597,22 +768,89 @@ const App: React.FC = () => {
                 </div>
               </>
             )}
+            
             {state.isCreateChannelOpen && (
               <>
-                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Chamber</h2>
-                <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Chamber Title" value={newChannelName} onChange={e => setNewChannelName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createChannel()} />
+                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New {createChannelType === ChannelType.TEXT ? 'Chamber' : 'Sanctuary'}</h2>
+                <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder={createChannelType === ChannelType.TEXT ? "Chamber Title" : "Voice Channel Name"} value={newChannelName} onChange={e => setNewChannelName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createChannel()} />
                 <div className="flex justify-end gap-4">
                   <button onClick={() => setState(prev => ({ ...prev, isCreateChannelOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
                   <button onClick={createChannel} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Construct</button>
                 </div>
               </>
             )}
+
+            {state.isAddFriendOpen && (
+              <>
+                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">Seek Ally</h2>
+                <div className="mb-6">
+                    <p className="text-xs text-theme-text-dim mb-2 text-center">Enter identity to search the archives.</p>
+                </div>
+                <div className="flex gap-2 mb-4">
+                    <input 
+                      autoFocus 
+                      className="flex-1 bg-theme-bg border border-theme-border p-3 text-theme-text font-medium focus:outline-none focus:border-theme-gold transition-all" 
+                      placeholder="User Identity" 
+                      value={friendSearchQuery} 
+                      onChange={e => setFriendSearchQuery(e.target.value)} 
+                      onKeyDown={e => e.key === 'Enter' && handleSearchFriends()} 
+                    />
+                    <button onClick={handleSearchFriends} className="px-4 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Search</button>
+                </div>
+
+                <div className="bg-theme-bg border border-theme-border max-h-60 overflow-y-auto mb-6 custom-scrollbar p-2">
+                    {friendSearchResults === null ? (
+                        <div className="text-center p-4 text-theme-text-dim text-xs italic">Enter a name to begin search.</div>
+                    ) : friendSearchResults.length === 0 ? (
+                        <div className="text-center p-4 text-theme-text-dim text-xs italic">No users found with that name.</div>
+                    ) : (
+                        <div className="space-y-1">
+                            {friendSearchResults.map(user => {
+                                const isAlreadyFriend = state.friends.some(f => f.id === user.id);
+                                const isSelf = state.currentUser?.id === user.id;
+
+                                return (
+                                    <div key={user.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <img src={user.avatar} className="w-8 h-8 rounded-full border border-theme-border object-cover" />
+                                            <span className="text-sm font-bold text-theme-text royal-font">{user.username}</span>
+                                        </div>
+                                        {isSelf ? (
+                                            <span className="text-[10px] text-theme-text-dim uppercase tracking-widest">You</span>
+                                        ) : isAlreadyFriend ? (
+                                            <span className="text-[10px] text-green-500 uppercase tracking-widest font-bold flex items-center gap-1">{ICONS.Check} Ally</span>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleAddFriend(user)}
+                                                className="px-3 py-1 bg-theme-gold/10 border border-theme-gold text-theme-gold hover:bg-theme-gold hover:text-black text-[10px] font-bold uppercase tracking-widest transition-all"
+                                            >
+                                                Add
+                                            </button>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-4">
+                  <button onClick={() => { setState(prev => ({ ...prev, isAddFriendOpen: false })); setFriendSearchResults(null); setFriendSearchQuery(''); }} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Close</button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
 
-      {state.isCallActive && state.callType && (
-        <CallScreen type={state.callType} participants={state.friends.slice(0, 2)} onDisconnect={() => setState(prev => ({ ...prev, isCallActive: false, callType: null }))} />
+      {state.isCallActive && state.callType && state.currentUser && (
+        <CallScreen 
+          currentUser={state.currentUser}
+          type={state.callType} 
+          participants={getCallParticipants()} 
+          onDisconnect={() => setState(prev => ({ ...prev, isCallActive: false, callType: null }))} 
+        />
       )}
     </div>
   );

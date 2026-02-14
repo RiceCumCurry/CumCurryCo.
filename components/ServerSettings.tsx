@@ -1,8 +1,8 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Server, Role, Permission, User } from '../types';
 import { ICONS } from '../constants';
-import { GripVertical, Trash2, Crown, Copy, Check, Upload, Search } from 'lucide-react';
+import { GripVertical, Trash2, Crown, Copy, Check, Upload, Search, Globe, Lock } from 'lucide-react';
 import { GiphyPicker } from './GiphyPicker';
 
 interface ServerSettingsProps {
@@ -33,6 +33,21 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
   // File Refs
   const iconInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  // Add ESC key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showGiphyPicker) {
+            setShowGiphyPicker(false);
+        } else {
+            onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, showGiphyPicker]);
 
   const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
   
@@ -236,6 +251,32 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                       onChange={(e) => onUpdateServer({ name: e.target.value })}
                       className="w-full bg-theme-panel border border-theme-border p-4 text-theme-text font-medium focus:outline-none focus:border-theme-gold" 
                     />
+                  </div>
+
+                  {/* Public Visibility Toggle */}
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Realm Visibility</label>
+                    <button 
+                      onClick={() => onUpdateServer({ isPublic: !server.isPublic })}
+                      className={`w-full flex items-center justify-between p-4 border transition-all ${server.isPublic ? 'border-theme-gold bg-white/5' : 'border-theme-border hover:border-theme-text-muted bg-theme-panel'}`}
+                    >
+                        <div className="flex items-center gap-4">
+                           <div className={`p-2 rounded-full ${server.isPublic ? 'bg-theme-gold/20 text-theme-gold' : 'bg-white/5 text-theme-text-dim'}`}>
+                             {server.isPublic ? <Globe size={20} /> : <Lock size={20} />}
+                           </div>
+                           <div className="text-left">
+                              <div className={`text-sm font-bold uppercase tracking-wider royal-font ${server.isPublic ? 'text-theme-gold-light' : 'text-theme-text-muted'}`}>
+                                {server.isPublic ? 'Public Domain' : 'Secret Society'}
+                              </div>
+                              <div className="text-[10px] text-theme-text-dim mt-1">
+                                {server.isPublic ? 'Discoverable by all via the Explore tab.' : 'Only invited members may enter.'}
+                              </div>
+                           </div>
+                        </div>
+                        <div className={`w-10 h-5 rounded-full relative transition-all ${server.isPublic ? 'bg-theme-gold' : 'bg-theme-border'}`}>
+                             <div className={`absolute top-1 w-3 h-3 rounded-full bg-black transition-all ${server.isPublic ? 'right-1' : 'left-1'}`} />
+                        </div>
+                    </button>
                   </div>
 
                   {/* Theme Selector */}

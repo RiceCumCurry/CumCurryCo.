@@ -76,6 +76,21 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  // Add ESC key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showGiphyPicker) {
+            setShowGiphyPicker(false);
+        } else {
+            onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, showGiphyPicker]);
+
   // Helper to compress images before storing
   const compressImage = (file: File, maxWidth: number): Promise<string> => {
     return new Promise((resolve, reject) => {

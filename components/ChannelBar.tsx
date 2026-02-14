@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ICONS } from '../constants';
 import { Server, ChannelType, User } from '../types';
 import MicVisualizer from './MicVisualizer';
-import { Info } from 'lucide-react';
+import { Info, UserPlus } from 'lucide-react';
 
 interface ChannelBarProps {
   server: Server | null;
@@ -17,11 +17,12 @@ interface ChannelBarProps {
   ping: number;
   connectionStatus: 'stable' | 'lagging' | 'disconnected';
   onSettingsChange: (settings: { noiseThreshold?: number; isMicMuted?: boolean }) => void;
-  onCreateChannel: () => void;
+  onCreateChannel: (type: ChannelType) => void;
   onOpenSettings: () => void;
   onOpenServerInfo: () => void;
   onOpenUserSettings: () => void;
   onUpdateUser: (updates: Partial<User>) => Promise<boolean | string>;
+  onAddFriend: () => void;
 }
 
 const ChannelBar: React.FC<ChannelBarProps> = ({ 
@@ -40,7 +41,8 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
   onOpenSettings,
   onOpenServerInfo,
   onOpenUserSettings,
-  onUpdateUser
+  onUpdateUser,
+  onAddFriend
 }) => {
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showServerMenu, setShowServerMenu] = useState(false);
@@ -113,7 +115,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
                 </button>
                 )}
                 <button 
-                onClick={() => { onCreateChannel(); setShowServerMenu(false); }}
+                onClick={() => { onCreateChannel(ChannelType.TEXT); setShowServerMenu(false); }}
                 className="w-full flex items-center justify-between px-3 py-3 text-xs font-bold text-theme-text-muted hover:bg-white/5 hover:text-theme-gold transition-all royal-font tracking-widest uppercase"
                 >
                 New Chamber
@@ -136,7 +138,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
               <div className="flex items-center text-theme-text-dim px-2 py-1 uppercase text-[10px] font-bold tracking-[0.2em] group cursor-default transition-colors border-b border-theme-border mb-2 royal-font">
                 <span className="flex-1 group-hover:text-theme-text-muted">Scrolls</span>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); onCreateChannel(); }}
+                  onClick={(e) => { e.stopPropagation(); onCreateChannel(ChannelType.TEXT); }}
                   className="hover:text-theme-gold-light transition-all"
                 >
                   {ICONS.Plus}
@@ -165,7 +167,12 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
             <div>
               <div className="flex items-center text-theme-text-dim px-2 py-1 uppercase text-[10px] font-bold tracking-[0.2em] group cursor-default transition-colors border-b border-theme-border mb-2 royal-font">
                 <span className="flex-1 group-hover:text-theme-text-muted">Ethereal</span>
-                <button className="hover:text-theme-gold-light transition-all">{ICONS.Plus}</button>
+                <button 
+                   onClick={(e) => { e.stopPropagation(); onCreateChannel(ChannelType.VOICE); }}
+                   className="hover:text-theme-gold-light transition-all"
+                >
+                    {ICONS.Plus}
+                </button>
               </div>
               <div className="space-y-1 mt-2">
                 {server.channels.filter(c => c.type !== 'TEXT').map(channel => (
@@ -198,8 +205,15 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
               <span className="mr-3 text-theme-text-muted group-hover:text-theme-gold-light">{ICONS.Users}</span>
               <span className="text-[11px] font-bold uppercase tracking-widest royal-font">Allies</span>
             </button>
-            <div className="pb-2 px-1 uppercase text-[10px] font-bold text-theme-text-dim tracking-widest border-b border-theme-border royal-font mb-4">
-              Direct Couriers
+            <div className="pb-2 px-1 uppercase text-[10px] font-bold text-theme-text-dim tracking-widest border-b border-theme-border royal-font mb-4 flex justify-between items-center">
+              <span>Direct Couriers</span>
+              <button 
+                onClick={onAddFriend} 
+                className="hover:text-theme-gold transition-colors text-theme-text-dim"
+                title="Add Ally"
+              >
+                <UserPlus size={14} />
+              </button>
             </div>
             {friends.map(friend => {
               const dmId = `dm_${friend.id}`;
