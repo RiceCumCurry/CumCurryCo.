@@ -148,7 +148,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-theme-bg flex animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[200] bg-theme-bg flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200">
       
       {showGiphyPicker && (
         <GiphyPicker 
@@ -158,28 +158,28 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
       )}
 
       {/* Settings Sidebar */}
-      <div className="w-64 bg-theme-panel border-r border-theme-border p-6 flex flex-col gap-1">
-        <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Court Decree</div>
+      <div className="w-full md:w-64 bg-theme-panel border-b md:border-b-0 md:border-r border-theme-border p-4 md:p-6 flex flex-row md:flex-col gap-2 md:gap-1 overflow-x-auto md:overflow-visible shrink-0">
+        <div className="hidden md:block text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Court Decree</div>
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'overview' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
+          className={`flex-1 md:flex-none text-center md:text-left px-4 py-2 md:py-3 border-b-2 md:border-b-0 md:border-l-2 text-xs md:text-sm font-bold transition-all royal-font tracking-wide whitespace-nowrap ${activeTab === 'overview' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Overview
         </button>
         <button 
           onClick={() => setActiveTab('roles')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'roles' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
+          className={`flex-1 md:flex-none text-center md:text-left px-4 py-2 md:py-3 border-b-2 md:border-b-0 md:border-l-2 text-xs md:text-sm font-bold transition-all royal-font tracking-wide whitespace-nowrap ${activeTab === 'roles' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Hierarchy
         </button>
         <button 
           onClick={() => setActiveTab('members')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'members' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
+          className={`flex-1 md:flex-none text-center md:text-left px-4 py-2 md:py-3 border-b-2 md:border-b-0 md:border-l-2 text-xs md:text-sm font-bold transition-all royal-font tracking-wide whitespace-nowrap ${activeTab === 'members' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Subjects
         </button>
         
-        <div className="mt-auto pt-6 border-t border-theme-border">
+        <div className="hidden md:block mt-auto pt-6 border-t border-theme-border">
           <button 
             onClick={onClose}
             className="w-full flex items-center justify-between px-4 py-3 border border-theme-border hover:border-theme-text-muted text-theme-text-muted hover:text-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font"
@@ -191,13 +191,18 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-theme-bg p-16 overflow-y-auto custom-scrollbar mandala-bg">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 bg-theme-bg p-4 md:p-16 overflow-y-auto custom-scrollbar mandala-bg">
+        <div className="max-w-4xl mx-auto pb-20 md:pb-0">
+          {/* Mobile Close Button */}
+          <div className="md:hidden mb-6 flex justify-end">
+             <button onClick={onClose} className="px-4 py-2 bg-theme-panel border border-theme-border text-theme-text-dim text-xs font-bold uppercase tracking-widest">Close</button>
+          </div>
+
           {activeTab === 'overview' && (
             <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Dominion Overview</h1>
-                <p className="text-theme-text-muted font-serif italic">The fundamental laws of your realm.</p>
+                <h1 className="text-2xl md:text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Dominion Overview</h1>
+                <p className="text-theme-text-muted font-serif italic text-sm">The fundamental laws of your realm.</p>
               </div>
 
               {/* Banner Edit */}
@@ -220,9 +225,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                  </div>
               </div>
 
-              <div className="flex gap-10 items-start">
-                <div className="relative group cursor-pointer -mt-10">
-                  <img src={server.icon} className="w-32 h-32 rounded-full object-cover border-4 border-theme-bg shadow-2xl transition-all group-hover:opacity-50" />
+              <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
+                <div className="relative group cursor-pointer -mt-10 mx-auto md:mx-0">
+                  <img src={server.icon} className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-theme-bg shadow-2xl transition-all group-hover:opacity-50" />
                   <div className="absolute inset-0 bg-black/80 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
                     <button 
                         onClick={() => iconInputRef.current?.click()}
@@ -242,7 +247,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                     <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'icon')} />
                   </div>
                 </div>
-                <div className="flex-1 space-y-8">
+                <div className="flex-1 space-y-8 w-full">
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Realm Name</label>
                     <input 
@@ -282,7 +287,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                   {/* Theme Selector */}
                   <div>
                     <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Realm Theme</label>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {THEMES.map(t => (
                             <button
                                 key={t.id}
@@ -319,15 +324,15 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
 
           {activeTab === 'roles' && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-              <div className="flex justify-between items-end border-b border-theme-border pb-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-theme-border pb-6 gap-4">
                 <div>
-                  <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Hierarchy</h1>
-                  <p className="text-theme-text-muted font-serif italic">Establish order among the ranks.</p>
+                  <h1 className="text-2xl md:text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Hierarchy</h1>
+                  <p className="text-theme-text-muted font-serif italic text-sm">Establish order among the ranks.</p>
                 </div>
-                <button onClick={addRole} className="px-6 py-3 bg-theme-panel border border-theme-gold text-theme-gold text-xs font-bold uppercase tracking-widest hover:bg-theme-gold hover:text-black transition-all">New Rank</button>
+                <button onClick={addRole} className="w-full md:w-auto px-6 py-3 bg-theme-panel border border-theme-gold text-theme-gold text-xs font-bold uppercase tracking-widest hover:bg-theme-gold hover:text-black transition-all">New Rank</button>
               </div>
 
-              <div className="grid grid-cols-[300px_1fr] gap-10">
+              <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-10">
                 <div className="space-y-2">
                   <div className="text-[10px] uppercase font-bold text-theme-text-dim tracking-widest px-2 mb-2 royal-font">Drag to Reorder</div>
                   {server.roles.map((role, index) => {
@@ -380,7 +385,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                   })}
                 </div>
 
-                <div className="bg-theme-panel border border-theme-border p-8 min-h-[400px]">
+                <div className="bg-theme-panel border border-theme-border p-4 md:p-8 min-h-[400px]">
                   {editingRole ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
                       <div className="flex items-center justify-between">
@@ -472,12 +477,12 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
           {activeTab === 'members' && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Subjects</h1>
-                <p className="text-theme-text-muted font-serif italic">The people of the realm.</p>
+                <h1 className="text-2xl md:text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Subjects</h1>
+                <p className="text-theme-text-muted font-serif italic text-sm">The people of the realm.</p>
               </div>
 
-              <div className="border border-theme-border">
-                <table className="w-full text-left">
+              <div className="border border-theme-border overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
                   <thead className="bg-theme-panel text-[10px] font-bold uppercase text-theme-text-dim tracking-widest border-b border-theme-border">
                     <tr>
                       <th className="px-6 py-4 royal-font">Identity</th>

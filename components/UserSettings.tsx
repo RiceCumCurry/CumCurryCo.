@@ -240,7 +240,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
   const currentTheme = THEMES[editForm.profileTheme as keyof typeof THEMES] || THEMES.royal;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-theme-bg flex animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[200] bg-theme-bg flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200">
       
       {showGiphyPicker && (
         <GiphyPicker 
@@ -249,22 +249,22 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
         />
       )}
 
-      <div className="w-64 bg-theme-panel border-r border-theme-border p-6 flex flex-col gap-1">
-        <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Personal Archive</div>
+      <div className="w-full md:w-64 bg-theme-panel border-b md:border-b-0 md:border-r border-theme-border p-4 md:p-6 flex flex-row md:flex-col gap-2 md:gap-1 shrink-0 overflow-x-auto md:overflow-visible">
+        <div className="hidden md:block text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Personal Archive</div>
         <button 
           onClick={() => setActiveTab('profile')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'profile' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
+          className={`flex-1 md:flex-none text-center md:text-left px-4 py-2 md:py-3 border-b-2 md:border-b-0 md:border-l-2 text-xs md:text-sm font-bold transition-all royal-font tracking-wide whitespace-nowrap ${activeTab === 'profile' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Identity
         </button>
         <button 
           onClick={() => setActiveTab('audio')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'audio' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
+          className={`flex-1 md:flex-none text-center md:text-left px-4 py-2 md:py-3 border-b-2 md:border-b-0 md:border-l-2 text-xs md:text-sm font-bold transition-all royal-font tracking-wide whitespace-nowrap ${activeTab === 'audio' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Resonance
         </button>
         
-        <div className="mt-auto pt-6 border-t border-theme-border space-y-2">
+        <div className="hidden md:block mt-auto pt-6 border-t border-theme-border space-y-2">
           <button 
             onClick={onLogout}
             className="w-full flex items-center justify-between px-4 py-3 border border-theme-border hover:border-red-900 text-red-800 hover:text-red-500 transition-all text-xs font-bold uppercase tracking-widest royal-font"
@@ -282,11 +282,16 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
         </div>
       </div>
 
-      <div className="flex-1 bg-theme-bg p-16 overflow-y-auto custom-scrollbar mandala-bg">
-        <div className="max-w-3xl mx-auto">
+      <div className="flex-1 bg-theme-bg p-4 md:p-16 overflow-y-auto custom-scrollbar mandala-bg">
+        <div className="max-w-3xl mx-auto pb-20 md:pb-0">
+          <div className="md:hidden mb-6 flex justify-end gap-2">
+             <button onClick={onLogout} className="px-4 py-2 bg-theme-panel border border-theme-border text-red-500 text-xs font-bold uppercase tracking-widest">{ICONS.LogOut}</button>
+             <button onClick={onClose} className="px-4 py-2 bg-theme-panel border border-theme-border text-theme-text-dim text-xs font-bold uppercase tracking-widest">Close</button>
+          </div>
+
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
-              <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Your Legacy</h1>
+              <h1 className="text-2xl md:text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Your Legacy</h1>
               
               {error && (
                 <div className="bg-red-900/10 border border-red-900/30 text-red-500 p-4 font-bold text-xs uppercase tracking-wide">
@@ -368,8 +373,8 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                   )}
                 </div>
 
-                <div className="px-10 pb-10 flex flex-col gap-8 -mt-16 relative z-10">
-                  <div className="flex items-end justify-between">
+                <div className="px-4 md:px-10 pb-10 flex flex-col gap-8 -mt-16 relative z-10">
+                  <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-4">
                     <div className="relative group">
                       <img 
                         src={editForm.avatar} 
@@ -415,16 +420,16 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                       )}
                     </div>
                     {!isEditing ? (
-                      <button onClick={() => setIsEditing(true)} className="px-6 py-2 border border-theme-border text-theme-text-muted hover:text-theme-gold hover:border-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font">Rewrite History</button>
+                      <button onClick={() => setIsEditing(true)} className="w-full md:w-auto px-6 py-2 border border-theme-border text-theme-text-muted hover:text-theme-gold hover:border-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font">Rewrite History</button>
                     ) : (
-                      <div className="flex gap-4">
-                        <button onClick={handleCancel} className="px-6 py-2 text-theme-text-dim hover:text-theme-text-muted transition-all text-xs font-bold uppercase tracking-widest royal-font">Cancel</button>
-                        <button onClick={handleSave} className="px-6 py-2 bg-theme-gold text-black font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all royal-font">Seal Changes</button>
+                      <div className="flex gap-4 w-full md:w-auto">
+                        <button onClick={handleCancel} className="flex-1 md:flex-none px-6 py-2 text-theme-text-dim hover:text-theme-text-muted transition-all text-xs font-bold uppercase tracking-widest royal-font">Cancel</button>
+                        <button onClick={handleSave} className="flex-1 md:flex-none px-6 py-2 bg-theme-gold text-black font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all royal-font">Seal Changes</button>
                       </div>
                     )}
                   </div>
                   
-                  <div className="bg-theme-bg p-8 border border-theme-border space-y-8">
+                  <div className="bg-theme-bg p-4 md:p-8 border border-theme-border space-y-8">
                     {/* ... (rest of form) ... */}
                     {/* Status Selection */}
                     {isEditing ? (
@@ -442,7 +447,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                                }`}
                              >
                                <div className={`w-2 h-2 rounded-full ${statusColors[s]}`} />
-                               {s === 'offline' ? 'Invisible' : s === 'idle' ? 'Idle / AFK' : s}
+                               <span className="hidden md:inline">{s === 'offline' ? 'Invisible' : s === 'idle' ? 'Idle / AFK' : s}</span>
                              </button>
                            ))}
                          </div>
@@ -476,7 +481,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                     {isEditing && (
                       <div>
                         <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-3 royal-font">App & Profile Theme</label>
-                        <div className="grid grid-cols-5 gap-3">
+                        <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                           {Object.entries(THEMES).map(([key, style]) => (
                             <button
                               key={key}
@@ -539,10 +544,10 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
 
           {activeTab === 'audio' && (
              <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
-               <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Acoustics</h1>
+               <h1 className="text-2xl md:text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Acoustics</h1>
                
                <div className="space-y-6">
-                 <div className="bg-theme-panel p-8 border border-theme-border">
+                 <div className="bg-theme-panel p-4 md:p-8 border border-theme-border">
                    <div className="flex justify-between items-center mb-4">
                      <h3 className="text-sm font-bold uppercase tracking-widest text-theme-gold-light royal-font">Input Sensitivity</h3>
                      <span className="text-[10px] font-bold text-theme-gold bg-white/5 px-2 py-0.5 border border-theme-border">{Math.round(noiseThreshold * 100)}%</span>
@@ -563,7 +568,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                    </div>
                  </div>
                  
-                 <div className="grid grid-cols-2 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-theme-panel p-6 border border-theme-border hover:border-theme-gold transition-all cursor-pointer group">
                       <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-theme-gold group-hover:text-black transition-colors text-theme-text-muted">
                          {ICONS.Mic}

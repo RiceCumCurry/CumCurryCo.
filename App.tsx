@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppState, User, Server, ChannelType, Channel, Message, Role, Notification } from './types';
-import { MOCK_SERVERS, MOCK_FRIENDS, ICONS } from './constants';
+import { MOCK_SERVERS, MOCK_FRIENDS, ICONS, SEED_USERS, SEED_SERVERS } from './constants';
 import Sidebar from './components/Sidebar';
 import ChannelBar from './components/ChannelBar';
 import ChatArea from './components/ChatArea';
@@ -12,6 +12,7 @@ import UserSettings from './components/UserSettings';
 import ServerInfoModal from './components/ServerInfoModal';
 import UserProfileModal from './components/UserProfileModal';
 import { socket } from './services/socket';
+import { Menu } from 'lucide-react';
 
 // Database Helper functions
 const getUsersDB = () => {
@@ -80,13 +81,35 @@ const App: React.FC = () => {
   });
 
   const [newServerName, setNewServerName] = useState('');
+  const [joinServerQuery, setJoinServerQuery] = useState(''); // New: Input for joining
+  const [createMode, setCreateMode] = useState<'create' | 'join'>('create'); // New: Toggle between create/join
   const [newChannelName, setNewChannelName] = useState('');
   const [createChannelType, setCreateChannelType] = useState<ChannelType>(ChannelType.TEXT);
   const [friendSearchQuery, setFriendSearchQuery] = useState('');
   const [friendSearchResults, setFriendSearchResults] = useState<User[] | null>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Helper to force refresh DB reads
 
-  // Socket Integration
+  // Initial Seeding & Socket
   useEffect(() => {
+    // Seed Users if empty
+    const usersDB = getUsersDB();
+    if (Object.keys(usersDB).length === 0) {
+        SEED_USERS.forEach(user => {
+            usersDB[user.email] = { email: user.email, password: 'password', user };
+        });
+        saveUsersDB(usersDB);
+    }
+
+    // Seed Servers if empty
+    const serversDB = getServersDB();
+    if (Object.keys(serversDB).length === 0) {
+        SEED_SERVERS.forEach(server => {
+            serversDB[server.id] = server;
+        });
+        saveServersDB(serversDB);
+    }
+
     // Connect to socket
     socket.connect();
 
@@ -491,6 +514,11 @@ const App: React.FC = () => {
       db[state.activeServerId] = updatedServer;
       saveServersDB(db);
 
+      // Force refresh of explore logic if public status changed
+      if (updates.isPublic !== undefined) {
+          setRefreshKey(prev => prev + 1);
+      }
+
       setState(prev => ({
           ...prev,
           servers: prev.servers.map(s => s.id === prev.activeServerId ? updatedServer : s)
@@ -529,6 +557,34 @@ const App: React.FC = () => {
       activeChannelId: newServer.channels[0].id
     }));
     setNewServerName('');
+  };
+
+  // Join server via ID or search
+  const handleJoinServer = () => {
+      if (!joinServerQuery.trim()) return;
+      const db = getServersDB();
+      const allServers = Object.values(db);
+      
+      // Try ID match first (parse link or direct ID)
+      const potentialId = joinServerQuery.split('/').pop() || joinServerQuery;
+      let targetServer = db[potentialId];
+
+      // If not found, try name search
+      if (!targetServer) {
+          targetServer = allServers.find(s => s.name.toLowerCase() === joinServerQuery.toLowerCase());
+      }
+
+      if (targetServer) {
+          if (state.servers.some(s => s.id === targetServer.id)) {
+              alert("You have already sworn allegiance to this realm.");
+              return;
+          }
+          joinServer(targetServer);
+          setState(prev => ({ ...prev, isCreateServerOpen: false }));
+          setJoinServerQuery('');
+      } else {
+          alert("Realm not found in the archives.");
+      }
   };
 
   const joinServer = (server: Server) => {
@@ -593,7 +649,7 @@ const App: React.FC = () => {
   }
 
   // Combine all known users for lookup
-  const allKnownUsers = state.currentUser ? [state.currentUser, ...state.friends] : [];
+  const allKnownUsers = state.currentUser ? [state.currentUser, ...state.friends, ...SEED_USERS] : [];
 
   if (!state.currentUser) {
     return <Auth onLogin={handleLogin} />;
@@ -610,51 +666,63 @@ const App: React.FC = () => {
       return [];
   };
 
-  // Explore Logic
+  // Explore Logic - Re-read DB on render or when forced
   const allServers = Object.values(getServersDB());
-  const publicServers = allServers.filter(s => s.isPublic && !s.memberRoles[state.currentUser!.id] && s.ownerId !== state.currentUser!.id);
+  // If no servers in DB yet, fallback to seed
+  const potentialServers = allServers.length > 0 ? allServers : SEED_SERVERS;
+  const publicServers = potentialServers.filter(s => s.isPublic && !s.memberRoles[state.currentUser!.id] && s.ownerId !== state.currentUser!.id);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-theme-bg text-theme-text select-none antialiased font-['Inter']">
-      <Sidebar 
-        servers={state.servers} 
-        activeServerId={state.activeServerId} 
-        onServerSelect={handleServerSelect} 
-        onAddServer={() => setState(prev => ({ ...prev, isCreateServerOpen: true }))}
-        onExplore={() => setState(prev => ({ ...prev, isExploreOpen: true, activeServerId: null }))}
-      />
       
-      <div className="flex flex-1">
-        <ChannelBar 
-          server={activeServer}
-          friends={state.friends}
-          activeChannelId={state.activeChannelId}
-          currentUser={state.currentUser}
-          onChannelSelect={(id) => setState(prev => ({ ...prev, activeChannelId: id }))}
-          onCall={(type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any }))}
-          noiseThreshold={state.noiseThreshold}
-          isMicMuted={state.isMicMuted}
-          ping={state.ping}
-          connectionStatus={state.connectionStatus}
-          onSettingsChange={(settings) => setState(prev => ({ ...prev, ...settings }))}
-          onCreateChannel={(type) => { setCreateChannelType(type); setState(prev => ({ ...prev, isCreateChannelOpen: true })); }}
-          onOpenSettings={() => setState(prev => ({ ...prev, isServerSettingsOpen: true }))}
-          onOpenServerInfo={() => setState(prev => ({ ...prev, isServerInfoOpen: true }))}
-          onOpenUserSettings={() => setState(prev => ({ ...prev, isUserSettingsOpen: true }))}
-          onUpdateUser={handleUpdateUser}
-          onAddFriend={() => setState(prev => ({ ...prev, isAddFriendOpen: true }))}
+      {/* Mobile Navigation Drawer */}
+      <div className={`fixed inset-0 z-40 flex md:static md:flex ${showMobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} transition-transform duration-300 bg-black/90 md:bg-transparent backdrop-blur md:backdrop-blur-none`}>
+        <Sidebar 
+            servers={state.servers} 
+            activeServerId={state.activeServerId} 
+            onServerSelect={(id) => { handleServerSelect(id); setShowMobileMenu(false); }} 
+            onAddServer={() => { setState(prev => ({ ...prev, isCreateServerOpen: true })); setShowMobileMenu(false); }}
+            onExplore={() => { setState(prev => ({ ...prev, isExploreOpen: true, activeServerId: null })); setShowMobileMenu(false); setRefreshKey(prev => prev + 1); }}
         />
-        
-        <main className="flex-1 flex flex-col relative bg-theme-bg">
+        <div className="flex flex-col h-full border-r border-theme-border">
+            <ChannelBar 
+                server={activeServer}
+                friends={state.friends}
+                activeChannelId={state.activeChannelId}
+                currentUser={state.currentUser}
+                onChannelSelect={(id) => { setState(prev => ({ ...prev, activeChannelId: id })); setShowMobileMenu(false); }}
+                onCall={(type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any }))}
+                noiseThreshold={state.noiseThreshold}
+                isMicMuted={state.isMicMuted}
+                ping={state.ping}
+                connectionStatus={state.connectionStatus}
+                onSettingsChange={(settings) => setState(prev => ({ ...prev, ...settings }))}
+                onCreateChannel={(type) => { setCreateChannelType(type); setState(prev => ({ ...prev, isCreateChannelOpen: true })); }}
+                onOpenSettings={() => setState(prev => ({ ...prev, isServerSettingsOpen: true }))}
+                onOpenServerInfo={() => setState(prev => ({ ...prev, isServerInfoOpen: true }))}
+                onOpenUserSettings={() => setState(prev => ({ ...prev, isUserSettingsOpen: true }))}
+                onUpdateUser={handleUpdateUser}
+                onAddFriend={() => setState(prev => ({ ...prev, isAddFriendOpen: true }))}
+            />
+        </div>
+        {/* Overlay click to close on mobile */}
+        <div className="flex-1 md:hidden" onClick={() => setShowMobileMenu(false)} />
+      </div>
+      
+      <div className="flex flex-1 min-w-0">
+        <main className="flex-1 flex flex-col relative bg-theme-bg min-w-0">
           {state.isExploreOpen ? (
-            <div className="flex-1 overflow-y-auto p-12 custom-scrollbar animate-in fade-in duration-300 mandala-bg">
-              <h1 className="text-4xl royal-font font-bold mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
+            <div className="flex-1 overflow-y-auto p-4 md:p-12 custom-scrollbar animate-in fade-in duration-300 mandala-bg">
+              <div className="md:hidden mb-4">
+                 <button onClick={() => setShowMobileMenu(true)} className="text-theme-gold"><Menu size={24} /></button>
+              </div>
+              <h1 className="text-2xl md:text-4xl royal-font font-bold mb-6 md:mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
               {publicServers.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
                     {publicServers.map(server => (
                       <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
                         <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative h-40 mb-4 overflow-hidden bg-black">
+                        <div className="relative h-32 md:h-40 mb-4 overflow-hidden bg-black">
                             <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover sepia-[0.5] group-hover:sepia-0 transition-all opacity-80" />
                             <div className="absolute bottom-[-20px] left-4">
                                 <img src={server.icon} className="w-16 h-16 rounded-full border-4 border-theme-panel object-cover shadow-lg" />
@@ -698,9 +766,13 @@ const App: React.FC = () => {
               onRejectFriendRequest={handleRejectFriendRequest}
               onCall={isDM ? (type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any })) : undefined}
               onAddReaction={handleAddReaction}
+              onToggleMobileMenu={() => setShowMobileMenu(true)}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center p-8 bg-theme-bg mandala-bg">
+            <div className="flex-1 flex items-center justify-center p-8 bg-theme-bg mandala-bg relative">
+               <div className="md:hidden absolute top-4 left-4">
+                 <button onClick={() => setShowMobileMenu(true)} className="text-theme-gold"><Menu size={24} /></button>
+               </div>
                <div className="text-center opacity-50">
                   <div className="w-24 h-24 rounded-full border-2 border-theme-gold flex items-center justify-center mx-auto mb-6">
                     <span className="text-4xl text-theme-gold">⚜️</span>
@@ -760,12 +832,41 @@ const App: React.FC = () => {
             
             {state.isCreateServerOpen && (
               <>
-                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Dominion</h2>
-                <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Kingdom Name" value={newServerName} onChange={e => setNewServerName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createServer()} />
-                <div className="flex justify-end gap-4">
-                  <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
-                  <button onClick={createServer} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Found</button>
+                <div className="flex justify-center gap-6 mb-6 border-b border-theme-border pb-4">
+                    <button 
+                      onClick={() => setCreateMode('create')}
+                      className={`text-sm font-bold uppercase tracking-widest royal-font transition-colors ${createMode === 'create' ? 'text-theme-gold' : 'text-theme-text-dim hover:text-theme-text-muted'}`}
+                    >
+                        Found
+                    </button>
+                    <button 
+                      onClick={() => setCreateMode('join')}
+                      className={`text-sm font-bold uppercase tracking-widest royal-font transition-colors ${createMode === 'join' ? 'text-theme-gold' : 'text-theme-text-dim hover:text-theme-text-muted'}`}
+                    >
+                        Join
+                    </button>
                 </div>
+
+                {createMode === 'create' ? (
+                    <>
+                        <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Dominion</h2>
+                        <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Kingdom Name" value={newServerName} onChange={e => setNewServerName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createServer()} />
+                        <div className="flex justify-end gap-4">
+                        <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
+                        <button onClick={createServer} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Found</button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">Pledge Allegiance</h2>
+                        <p className="text-xs text-theme-text-dim text-center mb-6">Enter an invite link, ID, or search by name to join a realm.</p>
+                        <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Invite Link or Server Name" value={joinServerQuery} onChange={e => setJoinServerQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleJoinServer()} />
+                        <div className="flex justify-end gap-4">
+                        <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
+                        <button onClick={handleJoinServer} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Join</button>
+                        </div>
+                    </>
+                )}
               </>
             )}
             

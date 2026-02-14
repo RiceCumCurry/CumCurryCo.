@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Message, User, Notification, Server, Role } from '../types';
-import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus } from 'lucide-react';
+import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus, Menu } from 'lucide-react';
 import ForwardModal from './ForwardModal';
 
 interface ChatAreaProps {
@@ -12,8 +12,8 @@ interface ChatAreaProps {
   notifications: Notification[];
   allUsers: User[];
   server: Server | null;
-  servers: Server[]; // Added to support forwarding
-  friends: User[]; // Added to support forwarding
+  servers: Server[]; 
+  friends: User[];
   isDM?: boolean;
   onSendMessage: (content: string, replyToId?: string) => void;
   onDeleteMessage: (messageId: string) => void;
@@ -23,6 +23,7 @@ interface ChatAreaProps {
   onRejectFriendRequest: (notificationId: string) => void;
   onCall?: (type: 'VOICE' | 'VIDEO') => void;
   onAddReaction: (messageId: string, emoji: string) => void;
+  onToggleMobileMenu: () => void;
 }
 
 const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉', '👍', '👎', '❤️', '😂'];
@@ -44,7 +45,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onAcceptFriendRequest,
   onRejectFriendRequest,
   onCall,
-  onAddReaction
+  onAddReaction,
+  onToggleMobileMenu
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -67,7 +69,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   }, [messages, channelName]);
 
   useEffect(() => {
-    // Focus input when replying
     if (replyingTo && inputRef.current) {
         inputRef.current.focus();
     }
@@ -113,7 +114,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     const roleIds = server.memberRoles[userId] || [];
     if (roleIds.length === 0) return null;
 
-    // Find all roles and sort by index in server.roles (lower index = higher priority)
     const userRoles = roleIds
       .map(id => server.roles.find(r => r.id === id))
       .filter((r): r is Role => !!r)
@@ -156,21 +156,17 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     });
   };
 
-  // Group Members Logic
   const memberGroups = React.useMemo(() => {
     if (!server) return [];
     
-    // Sort roles by priority
-    const sortedRoles = [...server.roles]; // Assuming order in array is priority
+    const sortedRoles = [...server.roles];
     
     const groups: { role: Role | null, members: User[] }[] = [];
     const membersWithRole = new Set<string>();
 
     sortedRoles.forEach(role => {
         const roleMembers = allUsers.filter(u => {
-             // Check if user is in server
              if (!server.memberJoinedAt[u.id]) return false;
-             // Check if this is their highest role
              const highest = getHighestRole(u.id);
              return highest?.id === role.id;
         });
@@ -181,7 +177,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         }
     });
 
-    // Members without roles
     const noRoleMembers = allUsers.filter(u => 
         server.memberJoinedAt[u.id] && !membersWithRole.has(u.id)
     );
@@ -209,17 +204,26 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
         <div className="flex-1 flex flex-col bg-theme-bg relative overflow-hidden mandala-bg min-w-0">
         {/* Top Header */}
-        <div className="h-16 border-b border-theme-border flex items-center px-8 justify-between bg-theme-bg/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
+        <div className="h-16 border-b border-theme-border flex items-center px-4 md:px-8 justify-between bg-theme-bg/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
             <div className="flex items-center gap-4">
-            <span className="text-theme-text-muted font-serif text-2xl">✦</span>
+            
+            {/* Mobile Menu Trigger */}
+            <button 
+                onClick={onToggleMobileMenu}
+                className="md:hidden text-theme-gold hover:text-theme-gold-light"
+            >
+                <Menu size={24} />
+            </button>
+
+            <span className="text-theme-text-muted font-serif text-2xl hidden md:block">✦</span>
             <div className="flex flex-col">
-                <span className="royal-font font-bold text-theme-gold uppercase tracking-widest text-lg">{channelName}</span>
-                <span className="text-[9px] text-theme-text-dim uppercase tracking-[0.2em] font-bold">
+                <span className="royal-font font-bold text-theme-gold uppercase tracking-widest text-lg truncate max-w-[150px] md:max-w-none">{channelName}</span>
+                <span className="text-[9px] text-theme-text-dim uppercase tracking-[0.2em] font-bold hidden md:block">
                   {isDM ? 'Private Correspondence' : 'Chamber of Discourse'}
                 </span>
             </div>
             </div>
-            <div className="flex items-center gap-6 text-theme-text-dim">
+            <div className="flex items-center gap-4 md:gap-6 text-theme-text-dim">
             
             {/* Private Call Buttons for DMs */}
             {isDM && onCall && (
@@ -254,7 +258,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </button>
                 
                 {showNotifications && (
-                <div className="absolute right-0 top-full mt-4 w-80 bg-theme-panel border border-theme-text-dim shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 top-full mt-4 w-72 md:w-80 bg-theme-panel border border-theme-text-dim shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-3 border-b border-theme-border text-xs font-bold uppercase tracking-widest text-theme-text-muted bg-theme-bg royal-font">
                     Decrees & Summons
                     </div>
@@ -303,14 +307,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     {ICONS.Users}
                 </button>
             )}
-            {!isDM && <div className="w-[1px] h-6 bg-theme-border" />}
-            {!isDM && <button className="hover:text-theme-gold transition-colors">{ICONS.Settings}</button>}
             </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar" ref={scrollRef} onClick={() => setReactingToMessageId(null)}>
-            <div className="py-16 px-10 border-b border-theme-border mb-10 max-w-4xl mx-auto text-center ornate-divider">
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-6 custom-scrollbar" ref={scrollRef} onClick={() => setReactingToMessageId(null)}>
+            <div className="py-16 px-10 border-b border-theme-border mb-10 max-w-4xl mx-auto text-center ornate-divider hidden md:flex">
             <div>
                 <div className="w-20 h-20 rounded-full border border-theme-gold flex items-center justify-center mx-auto mb-6 bg-black shadow-[0_0_30px_rgba(212,175,55,0.2)]">
                     <span className="text-3xl text-theme-gold">✦</span>
@@ -329,7 +331,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             const parentMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : null;
             
             return (
-                <div key={msg.id} className={`flex gap-6 group px-4 py-2 transition-all rounded-lg border border-transparent hover:border-theme-border relative ${isMention ? 'bg-theme-gold/10 border-l-2 border-l-theme-gold' : 'hover:bg-theme-gold/5'}`}>
+                <div key={msg.id} className={`flex gap-4 md:gap-6 group px-2 md:px-4 py-2 transition-all rounded-lg border border-transparent hover:border-theme-border relative ${isMention ? 'bg-theme-gold/10 border-l-2 border-l-theme-gold' : 'hover:bg-theme-gold/5'}`}>
                 
                 {/* Action Buttons (On Hover) */}
                 <div className="absolute top-0 right-4 -translate-y-1/2 flex items-center bg-theme-panel border border-theme-text-dim rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
@@ -377,7 +379,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 >
                     <img 
                     src={allUsers.find(u => u.id === msg.userId)?.avatar || `https://picsum.photos/seed/${msg.userId}/100/100`}
-                    className="w-12 h-12 rounded-full ring-2 ring-theme-border group-hover:ring-theme-gold transition-all object-cover shadow-lg" 
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full ring-2 ring-theme-border group-hover:ring-theme-gold transition-all object-cover shadow-lg" 
                     />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -417,7 +419,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         </div>
                     )}
 
-                    <p className="text-theme-text leading-relaxed font-light text-[15px] font-sans tracking-wide">
+                    <p className="text-theme-text leading-relaxed font-light text-[15px] font-sans tracking-wide break-words">
                         {renderMessageContent(msg.content)}
                     </p>
 
@@ -425,7 +427,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                             {Object.entries(msg.reactions).map(([emoji, userIds]) => {
-                                // Explicitly cast userIds to string[] to resolve type errors
                                 const ids = userIds as string[];
                                 return (
                                 <button
@@ -452,7 +453,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* Input */}
-        <div className="px-8 pb-8 pt-4 bg-gradient-to-t from-theme-bg to-transparent relative shrink-0">
+        <div className="px-4 md:px-8 pb-8 pt-4 bg-gradient-to-t from-theme-bg to-transparent relative shrink-0">
             {/* Mention Autocomplete */}
             {mentionQuery !== null && (filteredUsers.length > 0 || showEveryoneOption) && (
                 <div className="absolute bottom-24 left-16 bg-theme-panel border border-theme-text-dim shadow-2xl z-50 rounded min-w-[200px] overflow-hidden">
@@ -526,13 +527,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <input
                 ref={inputRef}
                 type="text"
-                placeholder={isDM ? `Message @${channelName}` : `Inscribe upon #${channelName}...`}
+                placeholder={isDM ? `Message @${channelName}` : `Inscribe...`}
                 className="flex-1 bg-transparent border-none outline-none text-theme-text placeholder-theme-border font-medium text-[15px] royal-font"
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-2 md:gap-4 items-center">
                 <button 
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="cursor-pointer opacity-50 hover:opacity-100 transition-opacity grayscale hover:grayscale-0"
@@ -552,11 +553,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* Member List Sidebar - Only show for servers */}
         {showMembers && !isDM && (
-            <div className="w-64 bg-theme-panel border-l border-theme-border flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20">
-                <div className="p-4 border-b border-theme-border bg-theme-bg">
+            <div className="w-64 bg-theme-panel border-l border-theme-border flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20 absolute right-0 h-full md:relative">
+                <div className="p-4 border-b border-theme-border bg-theme-bg flex justify-between items-center">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-theme-gold royal-font">
                         Subjects - {server?.memberRoles ? Object.keys(server.memberRoles).length : 0}
                     </h3>
+                    <button onClick={() => setShowMembers(false)} className="md:hidden text-theme-text-dim">
+                        <X size={16} />
+                    </button>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
                     {memberGroups.map((group, idx) => (
