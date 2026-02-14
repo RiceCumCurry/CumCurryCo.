@@ -23,7 +23,7 @@ export interface User {
   banner?: string;
   status: 'online' | 'idle' | 'dnd' | 'offline';
   customStatus?: string;
-  profileTheme?: 'royal' | 'prismatic' | 'minimalist';
+  profileTheme?: 'royal' | 'prismatic' | 'minimalist' | 'formula1' | 'redbull';
 }
 
 export interface Message {
@@ -51,7 +51,7 @@ export interface Server {
   roles: Role[];
   memberRoles: Record<string, string[]>; // userId -> roleIds[]
   memberJoinedAt: Record<string, number>; // userId -> timestamp
-  theme?: 'royal' | 'prismatic' | 'minimalist'; // Updated to match global themes
+  theme?: 'royal' | 'prismatic' | 'minimalist' | 'formula1' | 'redbull'; // Updated to match global themes
   createdAt: number;
 }
 

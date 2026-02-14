@@ -2,7 +2,8 @@
 import React, { useState, useRef } from 'react';
 import { Server, Role, Permission, User } from '../types';
 import { ICONS } from '../constants';
-import { GripVertical, Trash2, Crown, Copy, Check, Upload, Link as LinkIcon } from 'lucide-react';
+import { GripVertical, Trash2, Crown, Copy, Check, Upload, Search } from 'lucide-react';
+import { GiphyPicker } from './GiphyPicker';
 
 interface ServerSettingsProps {
   server: Server;
@@ -14,7 +15,9 @@ interface ServerSettingsProps {
 const THEMES = [
   { id: 'royal', name: 'Royal Court', color: '#D4AF37' },
   { id: 'prismatic', name: 'Prismatic', color: '#00ff9d' },
-  { id: 'minimalist', name: 'Void', color: '#525252' }
+  { id: 'minimalist', name: 'Void', color: '#525252' },
+  { id: 'formula1', name: 'Grand Prix', color: '#FF1801' },
+  { id: 'redbull', name: 'Wings', color: '#0C1528' }
 ];
 
 const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClose, onUpdateServer }) => {
@@ -22,6 +25,10 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [draggedRoleIndex, setDraggedRoleIndex] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Giphy State
+  const [showGiphyPicker, setShowGiphyPicker] = useState(false);
+  const [giphyTarget, setGiphyTarget] = useState<'icon' | 'banner' | null>(null);
 
   // File Refs
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -110,8 +117,31 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
     }
   };
 
+  const openGiphy = (target: 'icon' | 'banner') => {
+    setGiphyTarget(target);
+    setShowGiphyPicker(true);
+  };
+
+  const handleGiphySelect = (url: string) => {
+    if (giphyTarget === 'icon') {
+      onUpdateServer({ icon: url });
+    } else if (giphyTarget === 'banner') {
+      onUpdateServer({ banner: url });
+    }
+    setShowGiphyPicker(false);
+    setGiphyTarget(null);
+  };
+
   return (
     <div className="fixed inset-0 z-[200] bg-theme-bg flex animate-in fade-in zoom-in-95 duration-200">
+      
+      {showGiphyPicker && (
+        <GiphyPicker 
+          onClose={() => setShowGiphyPicker(false)} 
+          onSelect={handleGiphySelect} 
+        />
+      )}
+
       {/* Settings Sidebar */}
       <div className="w-64 bg-theme-panel border-r border-theme-border p-6 flex flex-col gap-1">
         <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Court Decree</div>
@@ -158,12 +188,18 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
               {/* Banner Edit */}
               <div className="relative w-full h-32 bg-theme-panel border border-theme-border group overflow-hidden">
                  <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-all" />
-                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-3">
                     <button 
                         onClick={() => bannerInputRef.current?.click()}
                         className="flex items-center gap-2 px-4 py-2 bg-black/80 text-theme-gold border border-theme-gold font-bold uppercase text-[10px] tracking-widest hover:bg-theme-gold hover:text-black transition-all"
                     >
-                        <Upload size={14} /> Change Banner
+                        <Upload size={14} /> Upload
+                    </button>
+                    <button 
+                        onClick={() => openGiphy('banner')}
+                        className="flex items-center gap-2 px-4 py-2 bg-black/80 text-theme-gold-light border border-theme-gold-light font-bold uppercase text-[10px] tracking-widest hover:bg-theme-gold-light hover:text-black transition-all"
+                    >
+                        <Search size={14} /> Giphy
                     </button>
                     <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
                  </div>
@@ -172,12 +208,21 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
               <div className="flex gap-10 items-start">
                 <div className="relative group cursor-pointer -mt-10">
                   <img src={server.icon} className="w-32 h-32 rounded-full object-cover border-4 border-theme-bg shadow-2xl transition-all group-hover:opacity-50" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute inset-0 bg-black/80 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-2">
                     <button 
                         onClick={() => iconInputRef.current?.click()}
-                        className="text-[10px] font-bold uppercase bg-black text-theme-gold border border-theme-gold px-3 py-1"
+                        className="flex flex-col items-center gap-1 group/btn"
                     >
-                        Modify
+                        <Upload size={14} className="text-theme-gold group-hover/btn:scale-110 transition-transform" />
+                        <span className="text-[8px] font-bold uppercase text-theme-gold royal-font">Img</span>
+                    </button>
+                    <div className="w-8 h-[1px] bg-theme-border" />
+                    <button 
+                        onClick={() => openGiphy('icon')}
+                        className="flex flex-col items-center gap-1 group/btn"
+                    >
+                        <Search size={14} className="text-theme-gold-light group-hover/btn:scale-110 transition-transform" />
+                        <span className="text-[8px] font-bold uppercase text-theme-gold-light royal-font">Gif</span>
                     </button>
                     <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'icon')} />
                   </div>
@@ -203,7 +248,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                                 onClick={() => onUpdateServer({ theme: t.id as any })}
                                 className={`border p-4 flex flex-col items-center gap-2 transition-all ${server.theme === t.id ? 'border-theme-gold bg-white/5' : 'border-theme-border hover:border-theme-text-muted'}`}
                             >
-                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: t.color }} />
+                                <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: t.color }} />
                                 <span className={`text-[10px] font-bold uppercase tracking-widest ${server.theme === t.id ? 'text-theme-gold' : 'text-theme-text-muted'}`}>{t.name}</span>
                             </button>
                         ))}

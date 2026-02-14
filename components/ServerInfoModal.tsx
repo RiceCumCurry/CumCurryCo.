@@ -23,34 +23,59 @@ const ServerInfoModal: React.FC<ServerInfoModalProps> = ({ server, members, onCl
         onClick={e => e.stopPropagation()}
       >
         {/* Ornamental Corners */}
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#D4AF37] z-20" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#D4AF37] z-20" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#D4AF37] z-20" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#D4AF37] z-20" />
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#D4AF37] z-20 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#D4AF37] z-20 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#D4AF37] z-20 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#D4AF37] z-20 pointer-events-none" />
 
         {/* Header Section */}
-        <div className="h-32 shrink-0 bg-[#050505] relative border-b border-[#3d2b0f] overflow-hidden group">
-           {/* Dynamic Header Background */}
-           <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')]" />
-           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
+        <div className="h-40 shrink-0 bg-[#050505] relative group">
+           {/* Banner Image */}
+           <div className="absolute inset-0 overflow-hidden">
+             {server.banner ? (
+                <img 
+                  src={server.banner} 
+                  alt="Server Banner" 
+                  className="w-full h-full object-cover opacity-80"
+                />
+             ) : (
+                <div className="w-full h-full bg-[#1a1a1a] bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50" />
+             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/40 to-transparent" />
+           </div>
            
-           <button onClick={onClose} className="absolute top-4 right-4 p-2 text-[#5c4010] hover:text-[#D4AF37] transition-all z-10">
+           <button 
+             onClick={onClose} 
+             className="absolute top-4 right-4 p-2 bg-black/50 text-[#D4AF37] hover:bg-black hover:text-[#F4C430] rounded-full transition-all z-30 border border-[#3d2b0f]"
+           >
              {ICONS.X}
            </button>
            
-           <div className="absolute -bottom-10 left-8 flex items-end gap-6 z-10">
-              <div className="relative">
-                <img src={server.icon} className="w-24 h-24 rounded-full border-4 border-[#0a0a0a] shadow-2xl object-cover bg-black" />
-                <div className="absolute inset-0 rounded-full shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] pointer-events-none" />
+           <div className="absolute -bottom-10 left-8 flex items-end gap-6 z-20">
+              <div className="relative group/icon">
+                <img 
+                  src={server.icon} 
+                  alt={server.name}
+                  className="w-24 h-24 rounded-full border-4 border-[#0a0a0a] shadow-[0_0_20px_rgba(0,0,0,0.5)] object-cover bg-black" 
+                />
+                {/* Shine effect on icon */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover/icon:opacity-100 pointer-events-none transition-opacity" />
               </div>
               <div className="mb-12">
-                <h2 className="text-2xl royal-font font-bold text-[#F4C430] uppercase tracking-widest drop-shadow-md">{server.name}</h2>
+                <h2 className="text-3xl royal-font font-bold text-[#F4C430] uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                  {server.name}
+                </h2>
+                <div className="flex items-center gap-2 mt-1 text-[#D4AF37] text-[10px] font-bold uppercase tracking-widest drop-shadow-md">
+                   <span>{members.length} Members</span>
+                   <span>•</span>
+                   <span>{server.theme || 'Royal'} Theme</span>
+                </div>
               </div>
            </div>
         </div>
         
         {/* Tab Navigation */}
-        <div className="flex border-b border-[#3d2b0f] pt-12 px-8 bg-[#0a0a0a] shrink-0">
+        <div className="flex border-b border-[#3d2b0f] pt-14 px-8 bg-[#0a0a0a] shrink-0">
           <button 
             onClick={() => setActiveTab('overview')}
             className={`px-4 py-2 text-xs font-bold uppercase tracking-widest royal-font border-b-2 transition-all ${activeTab === 'overview' ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-[#5c4010] hover:text-[#8a7038]'}`}
@@ -66,14 +91,14 @@ const ServerInfoModal: React.FC<ServerInfoModalProps> = ({ server, members, onCl
         </div>
 
         {/* Content Area */}
-        <div className="p-8 overflow-y-auto custom-scrollbar">
+        <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-[#0a0a0a]">
           {activeTab === 'overview' && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="grid grid-cols-2 gap-x-8 gap-y-6 mb-8">
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest royal-font">Sovereign</span>
                   <div className="flex items-center gap-2">
-                    <img src={owner?.avatar} className="w-5 h-5 rounded-full border border-[#3d2b0f]" />
+                    <img src={owner?.avatar} className="w-6 h-6 rounded-full border border-[#3d2b0f] object-cover" />
                     <div className="text-[#D4AF37] font-bold text-sm royal-font">{owner?.username || 'System'}</div>
                     {owner?.id === server.ownerId && <span className="text-[#F4C430] text-[10px]">👑</span>}
                   </div>
@@ -85,20 +110,20 @@ const ServerInfoModal: React.FC<ServerInfoModalProps> = ({ server, members, onCl
                 </div>
               </div>
 
-              <div className="h-[1px] bg-[#3d2b0f] mb-8" />
+              <div className="h-[1px] bg-[#3d2b0f] mb-8 opacity-50" />
 
               <div className="grid grid-cols-3 gap-4 mb-8 text-center">
-                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors">
-                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font">Subjects</span>
+                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors group">
+                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font group-hover:text-[#8a7038] transition-colors">Subjects</span>
                   <span className="text-[#D4AF37] font-serif text-xl">{members.length}</span>
                 </div>
-                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors">
-                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font">Ranks</span>
-                  <span className="text-[#8a7038] font-serif text-xl">{roleCount}</span>
+                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors group">
+                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font group-hover:text-[#8a7038] transition-colors">Ranks</span>
+                  <span className="text-[#8a7038] font-serif text-xl group-hover:text-[#D4AF37] transition-colors">{roleCount}</span>
                 </div>
-                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors">
-                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font">Chambers</span>
-                  <span className="text-[#8a7038] font-serif text-xl">{channelCount}</span>
+                <div className="bg-[#050505] p-3 border border-[#3d2b0f] hover:border-[#5c4010] transition-colors group">
+                  <span className="text-[9px] font-bold uppercase text-[#5c4010] tracking-widest block mb-1 royal-font group-hover:text-[#8a7038] transition-colors">Chambers</span>
+                  <span className="text-[#8a7038] font-serif text-xl group-hover:text-[#D4AF37] transition-colors">{channelCount}</span>
                 </div>
               </div>
 
@@ -126,7 +151,7 @@ const ServerInfoModal: React.FC<ServerInfoModalProps> = ({ server, members, onCl
                  const isOwner = member.id === server.ownerId;
 
                  return (
-                   <div key={member.id} className="flex items-center justify-between p-2 hover:bg-[#1a1a1a] rounded transition-colors group">
+                   <div key={member.id} className="flex items-center justify-between p-2 hover:bg-[#1a1a1a] rounded transition-colors group border border-transparent hover:border-[#3d2b0f]">
                      <div className="flex items-center gap-3">
                        <div className="relative">
                          <img src={member.avatar} className="w-8 h-8 rounded-full border border-[#3d2b0f] group-hover:border-[#D4AF37] object-cover" />
