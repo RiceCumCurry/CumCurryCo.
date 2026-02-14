@@ -1,30 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
+import { socket } from '../services/socket';
 
 interface AuthProps {
   onLogin: (user: User) => void;
 }
-
-interface UserRecord {
-  email: string;
-  password: string;
-  user: User;
-}
-
-const getUsersDB = (): Record<string, UserRecord> => {
-  const db = localStorage.getItem('cc_users_db');
-  return db ? JSON.parse(db) : {};
-};
-
-const saveUsersDB = (db: Record<string, UserRecord>) => {
-  try {
-    localStorage.setItem('cc_users_db', JSON.stringify(db));
-  } catch (e) {
-    console.error("Storage limit exceeded", e);
-    throw new Error("Storage quota exceeded. Cannot register new user.");
-  }
-};
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,54 +13,42 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Ensure socket is connected
+    socket.connect();
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    const db = getUsersDB();
+    setLoading(true);
 
     if (isLogin) {
-      // Login Logic
-      const userRecord = db[email];
-      if (userRecord && userRecord.password === password) {
-        onLogin(userRecord.user);
-      } else {
-        setError('Invalid credentials.');
-      }
+      socket.emit('auth:login', { email, password }, (response: any) => {
+        setLoading(false);
+        if (response.success) {
+          onLogin(response.user);
+        } else {
+          setError(response.error || 'Authentication failed.');
+        }
+      });
     } else {
-      // Sign Up Logic
-      if (db[email]) {
-        setError('Email already exists in the registry.');
-        return;
-      }
-
       if (!username.trim() || !email.trim() || !password.trim()) {
         setError('All fields must be inscribed.');
+        setLoading(false);
         return;
       }
 
-      const newUser: User = {
-        id: 'u' + Date.now(),
-        username: username,
-        email: email,
-        avatar: `https://picsum.photos/seed/${username}/200/200`,
-        status: 'online'
-      };
-
-      const newRecord: UserRecord = {
-        email,
-        password,
-        user: newUser
-      };
-
-      try {
-        db[email] = newRecord;
-        saveUsersDB(db);
-        onLogin(newUser);
-      } catch (e: any) {
-        setError(e.message || "Failed to save registration.");
-      }
+      socket.emit('auth:register', { email, password, username }, (response: any) => {
+        setLoading(false);
+        if (response.success) {
+          onLogin(response.user);
+        } else {
+          setError(response.error || 'Registration failed.');
+        }
+      });
     }
   };
 
@@ -128,6 +97,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 onChange={e => { setUsername(e.target.value); setError(''); }}
                 className="w-full bg-[#0c0c0c] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all placeholder-[#2a1d0a]"
                 placeholder="Name"
+                disabled={loading}
               />
             </div>
           )}
@@ -140,6 +110,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               onChange={e => { setEmail(e.target.value); setError(''); }}
               className="w-full bg-[#0c0c0c] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all placeholder-[#2a1d0a]"
               placeholder="Email"
+              disabled={loading}
             />
           </div>
           <div className="space-y-1">
@@ -151,14 +122,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               onChange={e => { setPassword(e.target.value); setError(''); }}
               className="w-full bg-[#0c0c0c] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all placeholder-[#2a1d0a]"
               placeholder="••••••••"
+              disabled={loading}
             />
           </div>
 
           <button 
             type="submit"
-            className="w-full bg-gradient-to-r from-[#8a7038] via-[#D4AF37] to-[#8a7038] text-black font-bold uppercase tracking-widest text-xs py-4 hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)] mt-4 royal-font"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-[#8a7038] via-[#D4AF37] to-[#8a7038] text-black font-bold uppercase tracking-widest text-xs py-4 hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)] mt-4 royal-font disabled:opacity-50"
           >
-            {isLogin ? 'Enter Court' : 'Sign Registry'}
+            {loading ? 'Consulting Archives...' : (isLogin ? 'Enter Court' : 'Sign Registry')}
           </button>
         </form>
 
