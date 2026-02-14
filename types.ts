@@ -11,6 +11,7 @@ export interface Role {
   id: string;
   name: string;
   color: string;
+  icon?: string; // New: Role Emoji
   permissions: Permission[];
 }
 
@@ -19,10 +20,10 @@ export interface User {
   username: string;
   email: string;
   avatar: string;
-  banner?: string; // New banner property
+  banner?: string;
   status: 'online' | 'idle' | 'dnd' | 'offline';
-  customStatus?: string; // New custom status property
-  profileTheme?: 'royal' | 'cyberpunk' | 'minimalist'; // New theme property
+  customStatus?: string;
+  profileTheme?: 'royal' | 'prismatic' | 'minimalist';
 }
 
 export interface Message {
@@ -30,7 +31,8 @@ export interface Message {
   userId: string;
   content: string;
   timestamp: number;
-  replyToId?: string; // New property for replies
+  replyToId?: string;
+  reactions?: Record<string, string[]>; // New: Emoji -> Array of User IDs
 }
 
 export interface Channel {
@@ -43,12 +45,13 @@ export interface Server {
   id: string;
   name: string;
   icon: string;
+  banner?: string; // New: Server Banner
   channels: Channel[];
   ownerId: string;
   roles: Role[];
   memberRoles: Record<string, string[]>; // userId -> roleIds[]
   memberJoinedAt: Record<string, number>; // userId -> timestamp
-  theme?: 'fiery' | 'void' | 'neon';
+  theme?: 'royal' | 'prismatic' | 'minimalist'; // Updated to match global themes
   createdAt: number;
 }
 
@@ -68,8 +71,8 @@ export interface AppState {
   activeChannelId: string | null;
   messages: Record<string, Message[]>; // channelId -> messages[]
   friends: User[];
-  notifications: Notification[]; // New notifications state
-  viewingUserId: string | null; // New state for profile modal
+  notifications: Notification[];
+  viewingUserId: string | null;
   isCallActive: boolean;
   callType: ChannelType | null;
   isCreateServerOpen: boolean;

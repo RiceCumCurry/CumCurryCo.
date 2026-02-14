@@ -46,12 +46,13 @@ const App: React.FC = () => {
     servers: MOCK_SERVERS.map(s => ({
         ...s,
         ownerId: 'u2',
-        theme: 'fiery',
+        theme: 'royal',
+        banner: 'https://picsum.photos/seed/server_banner/800/200',
         createdAt: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
         roles: [
-            { id: 'r1', name: 'admin', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
-            { id: 'r2', name: 'moderator', color: '#B8860B', permissions: ['MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
-            { id: 'r3', name: 'member', color: '#A9A9A9', permissions: ['SEND_MESSAGES'] }
+            { id: 'r1', name: 'admin', color: '#D4AF37', icon: '👑', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
+            { id: 'r2', name: 'moderator', color: '#B8860B', icon: '🛡️', permissions: ['MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
+            { id: 'r3', name: 'member', color: '#A9A9A9', icon: '⚔️', permissions: ['SEND_MESSAGES'] }
         ],
         memberRoles: {
             'u2': ['r1'],
@@ -67,7 +68,7 @@ const App: React.FC = () => {
     activeServerId: 's1',
     activeChannelId: 'c1',
     messages: {
-        'c1': [{ id: 'm1', userId: 'u2', content: 'Peace be upon this realm.', timestamp: Date.now() - 100000 }],
+        'c1': [{ id: 'm1', userId: 'u2', content: 'Peace be upon this realm.', timestamp: Date.now() - 100000, reactions: { '🔥': ['u3'] } }],
         'c2': [{ id: 'm2', userId: 'u3', content: 'Anyone wish to engage in combat?', timestamp: Date.now() - 50000 }]
     },
     friends: MOCK_FRIENDS,
@@ -94,10 +95,19 @@ const App: React.FC = () => {
   const [newServerName, setNewServerName] = useState('');
   const [newChannelName, setNewChannelName] = useState('');
 
-  // Update HTML data-theme attribute
+  // Sync theme: Server Theme > User Profile Theme > Default
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'royal');
-  }, []);
+    let theme = 'royal';
+    const activeServer = state.servers.find(s => s.id === state.activeServerId);
+    
+    if (activeServer && activeServer.theme) {
+      theme = activeServer.theme;
+    } else if (state.currentUser?.profileTheme) {
+      theme = state.currentUser.profileTheme;
+    }
+    
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [state.currentUser?.profileTheme, state.activeServerId, state.servers]);
 
   // Global Click Effect
   useEffect(() => {
@@ -253,7 +263,8 @@ const App: React.FC = () => {
           userId: state.currentUser.id,
           content,
           timestamp: Date.now(),
-          replyToId // Add reply ID
+          replyToId, // Add reply ID
+          reactions: {} 
       };
       
       // Simulate mention notification for demo
@@ -279,6 +290,47 @@ const App: React.FC = () => {
       }));
   };
 
+  const handleAddReaction = (messageId: string, emoji: string) => {
+    if (!state.activeChannelId || !state.currentUser) return;
+    
+    setState(prev => {
+        const channelMessages = prev.messages[prev.activeChannelId!] || [];
+        const updatedMessages = channelMessages.map(msg => {
+            if (msg.id === messageId) {
+                const currentReactions = msg.reactions || {};
+                const users = currentReactions[emoji] || [];
+                let newUsers = [];
+                
+                if (users.includes(state.currentUser!.id)) {
+                    // Remove reaction
+                    newUsers = users.filter(id => id !== state.currentUser!.id);
+                } else {
+                    // Add reaction
+                    newUsers = [...users, state.currentUser!.id];
+                }
+
+                const newReactions = { ...currentReactions };
+                if (newUsers.length > 0) {
+                    newReactions[emoji] = newUsers;
+                } else {
+                    delete newReactions[emoji];
+                }
+                
+                return { ...msg, reactions: newReactions };
+            }
+            return msg;
+        });
+
+        return {
+            ...prev,
+            messages: {
+                ...prev.messages,
+                [prev.activeChannelId!]: updatedMessages
+            }
+        };
+    });
+  };
+
   const handleDeleteMessage = (messageId: string) => {
     if (!state.activeChannelId) return;
     
@@ -299,7 +351,8 @@ const App: React.FC = () => {
           id: 'm' + Date.now(),
           userId: state.currentUser.id,
           content: forwardedContent,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          reactions: {}
       };
 
       setState(prev => ({
@@ -310,8 +363,6 @@ const App: React.FC = () => {
           }
       }));
       
-      // Switch to the target channel to show it happened (Optional UX choice)
-      // For now, we'll just stay put but maybe show a toast in a real app.
       alert(`Message forwarded to target.`);
   };
 
@@ -349,10 +400,11 @@ const App: React.FC = () => {
       id: 's' + Date.now(),
       name: newServerName,
       icon: `https://picsum.photos/seed/${newServerName}/100/100`,
+      banner: 'https://picsum.photos/seed/default_banner/800/200',
       ownerId: state.currentUser.id,
       createdAt: Date.now(),
-      theme: 'fiery',
-      roles: [{ id: 'r_owner', name: 'Monarch', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] }],
+      theme: 'royal',
+      roles: [{ id: 'r_owner', name: 'Monarch', color: '#D4AF37', icon: '👑', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] }],
       memberRoles: { [state.currentUser.id]: ['r_owner'] },
       memberJoinedAt: { [state.currentUser.id]: Date.now() },
       channels: [
@@ -406,7 +458,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#050505] text-[#F5F5DC] select-none antialiased font-['Inter']">
+    <div className="flex h-screen w-screen overflow-hidden bg-theme-bg text-theme-text select-none antialiased font-['Inter']">
       <Sidebar 
         servers={state.servers} 
         activeServerId={state.activeServerId} 
@@ -435,17 +487,17 @@ const App: React.FC = () => {
           onUpdateUser={handleUpdateUser}
         />
         
-        <main className="flex-1 flex flex-col relative bg-[#050505]">
+        <main className="flex-1 flex flex-col relative bg-theme-bg">
           {state.isExploreOpen ? (
             <div className="flex-1 overflow-y-auto p-12 custom-scrollbar animate-in fade-in duration-300 mandala-bg">
-              <h1 className="text-4xl royal-font font-bold mb-10 text-[#D4AF37] uppercase tracking-widest text-center border-b border-[#3d2b0f] pb-6">Kingdoms of the Realm</h1>
+              <h1 className="text-4xl royal-font font-bold mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {['Royal Guard', 'Arcane Sanctum', 'Merchants Guild', 'Gladiator Pit'].map(name => (
-                  <div key={name} className="bg-[#0a0a0a] border border-[#3d2b0f] p-4 shadow-xl hover:border-[#D4AF37] transition-all group cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div key={name} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold opacity-0 group-hover:opacity-100 transition-opacity" />
                     <img src={`https://picsum.photos/seed/${name}/400/200`} className="w-full h-40 object-cover mb-4 sepia-[0.5] group-hover:sepia-0 transition-all" />
-                    <h3 className="font-bold text-lg mb-2 uppercase tracking-wide text-[#F4C430] royal-font">{name}</h3>
-                    <button onClick={() => { setNewServerName(name); createServer(); setState(prev => ({ ...prev, isExploreOpen: false })); }} className="w-full py-3 bg-[#1a1a1a] text-[#8a7038] group-hover:bg-[#D4AF37] group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font">Pledge Loyalty</button>
+                    <h3 className="font-bold text-lg mb-2 uppercase tracking-wide text-theme-gold-light royal-font">{name}</h3>
+                    <button onClick={() => { setNewServerName(name); createServer(); setState(prev => ({ ...prev, isExploreOpen: false })); }} className="w-full py-3 bg-theme-panel text-theme-text-muted group-hover:bg-theme-gold group-hover:text-black font-bold uppercase text-xs tracking-widest transition-all royal-font">Pledge Loyalty</button>
                   </div>
                 ))}
               </div>
@@ -468,14 +520,15 @@ const App: React.FC = () => {
               onAcceptFriendRequest={handleAcceptFriendRequest}
               onRejectFriendRequest={handleRejectFriendRequest}
               onCall={isDM ? (type) => setState(prev => ({ ...prev, isCallActive: true, callType: type as any })) : undefined}
+              onAddReaction={handleAddReaction}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center p-8 bg-[#050505] mandala-bg">
+            <div className="flex-1 flex items-center justify-center p-8 bg-theme-bg mandala-bg">
                <div className="text-center opacity-50">
-                  <div className="w-24 h-24 rounded-full border-2 border-[#D4AF37] flex items-center justify-center mx-auto mb-6">
-                    <span className="text-4xl text-[#D4AF37]">⚜️</span>
+                  <div className="w-24 h-24 rounded-full border-2 border-theme-gold flex items-center justify-center mx-auto mb-6">
+                    <span className="text-4xl text-theme-gold">⚜️</span>
                   </div>
-                  <h1 className="text-3xl royal-font font-bold uppercase text-[#8a7038] tracking-widest">Awaiting Command</h1>
+                  <h1 className="text-3xl royal-font font-bold uppercase text-theme-text-muted tracking-widest">Awaiting Command</h1>
                </div>
             </div>
           )}
@@ -524,25 +577,25 @@ const App: React.FC = () => {
       {/* Basic Modals */}
       {(state.isCreateServerOpen || state.isCreateChannelOpen || state.isAddFriendOpen) && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#0a0a0a] border border-[#5c4010] p-10 shadow-2xl relative">
-             <div className="absolute top-0 left-0 w-full h-1 bg-[#D4AF37]" />
+          <div className="w-full max-w-md bg-theme-panel border border-theme-border p-10 shadow-2xl relative">
+             <div className="absolute top-0 left-0 w-full h-1 bg-theme-gold" />
             {state.isCreateServerOpen && (
               <>
-                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-[#F4C430] text-center">New Dominion</h2>
-                <input autoFocus className="w-full bg-[#050505] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium mb-8 focus:outline-none focus:border-[#D4AF37] transition-all" placeholder="Kingdom Name" value={newServerName} onChange={e => setNewServerName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createServer()} />
+                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Dominion</h2>
+                <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Kingdom Name" value={newServerName} onChange={e => setNewServerName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createServer()} />
                 <div className="flex justify-end gap-4">
-                  <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-[#5c4010] hover:text-[#D4AF37] transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
-                  <button onClick={createServer} className="px-8 py-3 bg-[#D4AF37] text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Found</button>
+                  <button onClick={() => setState(prev => ({ ...prev, isCreateServerOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
+                  <button onClick={createServer} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Found</button>
                 </div>
               </>
             )}
             {state.isCreateChannelOpen && (
               <>
-                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-[#F4C430] text-center">New Chamber</h2>
-                <input autoFocus className="w-full bg-[#050505] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium mb-8 focus:outline-none focus:border-[#D4AF37] transition-all" placeholder="Chamber Title" value={newChannelName} onChange={e => setNewChannelName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createChannel()} />
+                <h2 className="text-2xl royal-font font-bold mb-6 uppercase tracking-widest text-theme-gold-light text-center">New Chamber</h2>
+                <input autoFocus className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium mb-8 focus:outline-none focus:border-theme-gold transition-all" placeholder="Chamber Title" value={newChannelName} onChange={e => setNewChannelName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createChannel()} />
                 <div className="flex justify-end gap-4">
-                  <button onClick={() => setState(prev => ({ ...prev, isCreateChannelOpen: false }))} className="font-bold text-[#5c4010] hover:text-[#D4AF37] transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
-                  <button onClick={createChannel} className="px-8 py-3 bg-[#D4AF37] text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Construct</button>
+                  <button onClick={() => setState(prev => ({ ...prev, isCreateChannelOpen: false }))} className="font-bold text-theme-text-dim hover:text-theme-gold transition-colors uppercase text-xs tracking-widest royal-font">Retreat</button>
+                  <button onClick={createChannel} className="px-8 py-3 bg-theme-gold text-black font-bold uppercase text-xs tracking-widest hover:brightness-110 transition-all royal-font">Construct</button>
                 </div>
               </>
             )}

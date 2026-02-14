@@ -29,10 +29,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
         onClick={e => e.stopPropagation()}
       >
         {/* Banner */}
-        <div className="h-32 bg-[#1a1a1a] relative">
+        <div className="h-32 bg-[#1a1a1a] relative overflow-hidden">
           <div className="absolute inset-0 w-full h-full">
             {user.banner && user.banner.startsWith('linear-gradient') ? (
-              <div className="w-full h-full opacity-80" style={{ background: user.banner }} />
+              <div 
+                className="w-full h-full opacity-80 animate-gradient-xy" 
+                style={{ background: user.banner }} 
+              />
             ) : user.banner ? (
               <img src={user.banner} alt="Banner" className="w-full h-full object-cover opacity-80" />
             ) : (

@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Server, Role, Permission, User } from '../types';
 import { ICONS } from '../constants';
-import { GripVertical, Trash2, Crown, Copy, Check } from 'lucide-react';
+import { GripVertical, Trash2, Crown, Copy, Check, Upload, Link as LinkIcon } from 'lucide-react';
 
 interface ServerSettingsProps {
   server: Server;
@@ -11,11 +11,21 @@ interface ServerSettingsProps {
   onUpdateServer: (updates: Partial<Server>) => void;
 }
 
+const THEMES = [
+  { id: 'royal', name: 'Royal Court', color: '#D4AF37' },
+  { id: 'prismatic', name: 'Prismatic', color: '#00ff9d' },
+  { id: 'minimalist', name: 'Void', color: '#525252' }
+];
+
 const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClose, onUpdateServer }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'members'>('overview');
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [draggedRoleIndex, setDraggedRoleIndex] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // File Refs
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
   
@@ -42,6 +52,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
       id: 'role_' + Date.now(),
       name: 'new rank',
       color: '#D4AF37',
+      icon: '🛡️',
       permissions: ['SEND_MESSAGES']
     };
     onUpdateServer({ roles: [...server.roles, newRole] });
@@ -56,7 +67,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
 
   // Drag and Drop Handlers
   const handleDragStart = (e: React.DragEvent, index: number) => {
-    // Prevent dragging the owner role (index 0)
     if (index === 0) {
         e.preventDefault();
         return;
@@ -67,7 +77,6 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    // Prevent dropping onto the owner role (index 0)
     if (index === 0) {
         e.dataTransfer.dropEffect = 'none';
         return;
@@ -78,7 +87,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     if (draggedRoleIndex === null || draggedRoleIndex === dropIndex) return;
-    if (dropIndex === 0) return; // Cannot displace owner role
+    if (dropIndex === 0) return; 
 
     const newRoles = [...server.roles];
     const [draggedRole] = newRoles.splice(draggedRoleIndex, 1);
@@ -88,34 +97,47 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
     setDraggedRoleIndex(null);
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'icon' | 'banner') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          onUpdateServer({ [field]: event.target.result as string });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] bg-[#050505] flex animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[200] bg-theme-bg flex animate-in fade-in zoom-in-95 duration-200">
       {/* Settings Sidebar */}
-      <div className="w-64 bg-[#080808] border-r border-[#3d2b0f] p-6 flex flex-col gap-1">
-        <div className="text-[10px] font-bold uppercase text-[#5c4010] tracking-[0.2em] mb-6 px-2 royal-font">Court Decree</div>
+      <div className="w-64 bg-theme-panel border-r border-theme-border p-6 flex flex-col gap-1">
+        <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Court Decree</div>
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'overview' ? 'border-[#D4AF37] bg-[#1a1a1a] text-[#F4C430]' : 'border-transparent text-[#8a7038] hover:text-[#D4AF37]'}`}
+          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'overview' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Overview
         </button>
         <button 
           onClick={() => setActiveTab('roles')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'roles' ? 'border-[#D4AF37] bg-[#1a1a1a] text-[#F4C430]' : 'border-transparent text-[#8a7038] hover:text-[#D4AF37]'}`}
+          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'roles' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Hierarchy
         </button>
         <button 
           onClick={() => setActiveTab('members')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'members' ? 'border-[#D4AF37] bg-[#1a1a1a] text-[#F4C430]' : 'border-transparent text-[#8a7038] hover:text-[#D4AF37]'}`}
+          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'members' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Subjects
         </button>
         
-        <div className="mt-auto pt-6 border-t border-[#3d2b0f]">
+        <div className="mt-auto pt-6 border-t border-theme-border">
           <button 
             onClick={onClose}
-            className="w-full flex items-center justify-between px-4 py-3 border border-[#3d2b0f] hover:border-[#8a7038] text-[#8a7038] hover:text-[#D4AF37] transition-all text-xs font-bold uppercase tracking-widest royal-font"
+            className="w-full flex items-center justify-between px-4 py-3 border border-theme-border hover:border-theme-text-muted text-theme-text-muted hover:text-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font"
           >
             Depart
             <span className="scale-75 opacity-50">ESC</span>
@@ -124,44 +146,81 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 bg-[#050505] p-16 overflow-y-auto custom-scrollbar mandala-bg">
+      <div className="flex-1 bg-theme-bg p-16 overflow-y-auto custom-scrollbar mandala-bg">
         <div className="max-w-4xl mx-auto">
           {activeTab === 'overview' && (
             <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-[#D4AF37] mb-2">Dominion Overview</h1>
-                <p className="text-[#8a7038] font-serif italic">The fundamental laws of your realm.</p>
+                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Dominion Overview</h1>
+                <p className="text-theme-text-muted font-serif italic">The fundamental laws of your realm.</p>
+              </div>
+
+              {/* Banner Edit */}
+              <div className="relative w-full h-32 bg-theme-panel border border-theme-border group overflow-hidden">
+                 <img src={server.banner || "https://picsum.photos/seed/default_banner/800/200"} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-all" />
+                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                        onClick={() => bannerInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 bg-black/80 text-theme-gold border border-theme-gold font-bold uppercase text-[10px] tracking-widest hover:bg-theme-gold hover:text-black transition-all"
+                    >
+                        <Upload size={14} /> Change Banner
+                    </button>
+                    <input type="file" ref={bannerInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
+                 </div>
               </div>
 
               <div className="flex gap-10 items-start">
-                <div className="relative group cursor-pointer">
-                  <img src={server.icon} className="w-32 h-32 rounded-full object-cover border-4 border-[#3d2b0f] shadow-2xl transition-all group-hover:opacity-50" />
+                <div className="relative group cursor-pointer -mt-10">
+                  <img src={server.icon} className="w-32 h-32 rounded-full object-cover border-4 border-theme-bg shadow-2xl transition-all group-hover:opacity-50" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[10px] font-bold uppercase bg-black text-[#D4AF37] border border-[#D4AF37] px-3 py-1">Modify</span>
+                    <button 
+                        onClick={() => iconInputRef.current?.click()}
+                        className="text-[10px] font-bold uppercase bg-black text-theme-gold border border-theme-gold px-3 py-1"
+                    >
+                        Modify
+                    </button>
+                    <input type="file" ref={iconInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'icon')} />
                   </div>
                 </div>
                 <div className="flex-1 space-y-8">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-3 royal-font">Realm Name</label>
+                    <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Realm Name</label>
                     <input 
                       type="text" 
                       value={server.name}
                       onChange={(e) => onUpdateServer({ name: e.target.value })}
-                      className="w-full bg-[#0a0a0a] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37]" 
+                      className="w-full bg-theme-panel border border-theme-border p-4 text-theme-text font-medium focus:outline-none focus:border-theme-gold" 
                     />
                   </div>
 
-                  <div className="bg-[#0a0a0a] border border-[#3d2b0f] p-4">
-                    <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-2 royal-font">Realm Invite Link</label>
+                  {/* Theme Selector */}
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Realm Theme</label>
+                    <div className="grid grid-cols-3 gap-4">
+                        {THEMES.map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => onUpdateServer({ theme: t.id as any })}
+                                className={`border p-4 flex flex-col items-center gap-2 transition-all ${server.theme === t.id ? 'border-theme-gold bg-white/5' : 'border-theme-border hover:border-theme-text-muted'}`}
+                            >
+                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: t.color }} />
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${server.theme === t.id ? 'text-theme-gold' : 'text-theme-text-muted'}`}>{t.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-theme-panel border border-theme-border p-4">
+                    <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-2 royal-font">Realm Invite Link</label>
                     <div className="flex gap-2">
                         <input 
                         readOnly 
                         value={inviteLink}
-                        className="flex-1 bg-[#050505] border border-[#3d2b0f] p-3 text-[#8a7038] font-mono text-xs focus:outline-none"
+                        className="flex-1 bg-theme-bg border border-theme-border p-3 text-theme-text-muted font-mono text-xs focus:outline-none"
                         />
                         <button 
                         onClick={copyInvite}
-                        className="px-4 bg-[#1a1a1a] border border-[#3d2b0f] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all flex items-center justify-center"
+                        className="px-4 bg-theme-panel border border-theme-border text-theme-gold hover:bg-theme-gold hover:text-black transition-all flex items-center justify-center"
                         >
                         {copied ? <Check size={16} /> : <Copy size={16} />}
                         </button>
@@ -174,17 +233,17 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
 
           {activeTab === 'roles' && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
-              <div className="flex justify-between items-end border-b border-[#3d2b0f] pb-6">
+              <div className="flex justify-between items-end border-b border-theme-border pb-6">
                 <div>
-                  <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-[#D4AF37] mb-2">Hierarchy</h1>
-                  <p className="text-[#8a7038] font-serif italic">Establish order among the ranks.</p>
+                  <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Hierarchy</h1>
+                  <p className="text-theme-text-muted font-serif italic">Establish order among the ranks.</p>
                 </div>
-                <button onClick={addRole} className="px-6 py-3 bg-[#1a1a1a] border border-[#D4AF37] text-[#D4AF37] text-xs font-bold uppercase tracking-widest hover:bg-[#D4AF37] hover:text-black transition-all">New Rank</button>
+                <button onClick={addRole} className="px-6 py-3 bg-theme-panel border border-theme-gold text-theme-gold text-xs font-bold uppercase tracking-widest hover:bg-theme-gold hover:text-black transition-all">New Rank</button>
               </div>
 
               <div className="grid grid-cols-[300px_1fr] gap-10">
                 <div className="space-y-2">
-                  <div className="text-[10px] uppercase font-bold text-[#5c4010] tracking-widest px-2 mb-2 royal-font">Drag to Reorder</div>
+                  <div className="text-[10px] uppercase font-bold text-theme-text-dim tracking-widest px-2 mb-2 royal-font">Drag to Reorder</div>
                   {server.roles.map((role, index) => {
                     const isOwnerRole = index === 0;
                     return (
@@ -197,18 +256,19 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                             onClick={() => setEditingRole(role)}
                             className={`w-full text-left px-3 py-3 border text-sm font-bold transition-all flex items-center gap-3 group relative
                                 ${editingRole?.id === role.id 
-                                    ? 'bg-[#1a1a1a] border-[#D4AF37] text-[#F4C430] z-10' 
-                                    : 'border-transparent bg-[#080808] text-[#8a7038] hover:bg-[#111] hover:text-[#D4AF37]'
+                                    ? 'bg-white/5 border-theme-gold text-theme-gold-light z-10' 
+                                    : 'border-transparent bg-theme-panel text-theme-text-muted hover:bg-white/5 hover:text-theme-gold'
                                 }
-                                ${draggedRoleIndex === index ? 'opacity-50 border-dashed border-[#8a7038]' : ''}
-                                ${isOwnerRole ? 'border-[#5c4010] bg-[#0a0a0a]' : 'cursor-pointer'}
+                                ${draggedRoleIndex === index ? 'opacity-50 border-dashed border-theme-text-muted' : ''}
+                                ${isOwnerRole ? 'border-theme-text-dim bg-theme-panel' : 'cursor-pointer'}
                             `}
                         >
-                            <div className={`shrink-0 ${isOwnerRole ? 'cursor-default' : 'cursor-move text-[#5c4010] hover:text-[#D4AF37]'}`}>
-                                {isOwnerRole ? <Crown size={14} className="text-[#D4AF37]" /> : <GripVertical size={14} />}
+                            <div className={`shrink-0 ${isOwnerRole ? 'cursor-default' : 'cursor-move text-theme-text-dim hover:text-theme-gold'}`}>
+                                {isOwnerRole ? <Crown size={14} className="text-theme-gold" /> : <GripVertical size={14} />}
                             </div>
                             
                             <div className="flex-1 flex items-center gap-3 overflow-hidden">
+                                {role.icon && <span className="text-base">{role.icon}</span>}
                                 <div className="w-2 h-2 rounded-full shrink-0 shadow-[0_0_5px_currentColor]" style={{ backgroundColor: role.color }} />
                                 <span className="royal-font tracking-wide uppercase text-xs truncate">{role.name}</span>
                             </div>
@@ -227,25 +287,25 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                             
                             {/* Selection Indicator */}
                             {editingRole?.id === role.id && (
-                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#D4AF37]" />
+                                <div className="absolute right-0 top-0 bottom-0 w-1 bg-theme-gold" />
                             )}
                         </div>
                     );
                   })}
                 </div>
 
-                <div className="bg-[#0a0a0a] border border-[#3d2b0f] p-8 min-h-[400px]">
+                <div className="bg-theme-panel border border-theme-border p-8 min-h-[400px]">
                   {editingRole ? (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-200">
                       <div className="flex items-center justify-between">
-                         <h3 className="text-sm font-bold uppercase tracking-widest text-[#F4C430] royal-font">Editing: {editingRole.name}</h3>
+                         <h3 className="text-sm font-bold uppercase tracking-widest text-theme-gold-light royal-font">Editing: {editingRole.name}</h3>
                          {server.roles[0].id === editingRole.id && (
-                             <span className="text-[10px] font-bold uppercase bg-[#D4AF37] text-black px-2 py-0.5 rounded-sm">High Command</span>
+                             <span className="text-[10px] font-bold uppercase bg-theme-gold text-black px-2 py-0.5 rounded-sm">High Command</span>
                          )}
                       </div>
                       
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-3 royal-font">Title</label>
+                        <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Title</label>
                         <input 
                           type="text" 
                           value={editingRole.name}
@@ -254,41 +314,58 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                             setEditingRole(updated);
                             onUpdateServer({ roles: server.roles.map(r => r.id === editingRole.id ? updated : r) });
                           }}
-                          className="w-full bg-[#050505] border border-[#3d2b0f] p-4 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37]" 
+                          className="w-full bg-theme-bg border border-theme-border p-4 text-theme-text font-medium focus:outline-none focus:border-theme-gold" 
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-3 royal-font">Color</label>
-                        <div className="flex items-center gap-4">
-                           <input 
-                             type="color" 
-                             value={editingRole.color}
-                             onChange={(e) => {
-                                const updated = { ...editingRole, color: e.target.value };
-                                setEditingRole(updated);
-                                onUpdateServer({ roles: server.roles.map(r => r.id === editingRole.id ? updated : r) });
-                             }}
-                             className="w-12 h-12 p-1 bg-[#050505] border border-[#3d2b0f] cursor-pointer"
-                           />
-                           <span className="text-xs font-mono text-[#8a7038]">{editingRole.color}</span>
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                            <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Color</label>
+                            <div className="flex items-center gap-4">
+                            <input 
+                                type="color" 
+                                value={editingRole.color}
+                                onChange={(e) => {
+                                    const updated = { ...editingRole, color: e.target.value };
+                                    setEditingRole(updated);
+                                    onUpdateServer({ roles: server.roles.map(r => r.id === editingRole.id ? updated : r) });
+                                }}
+                                className="w-12 h-12 p-1 bg-theme-bg border border-theme-border cursor-pointer"
+                            />
+                            <span className="text-xs font-mono text-theme-text-muted">{editingRole.color}</span>
+                            </div>
+                        </div>
+                        <div className="flex-1">
+                            <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-3 royal-font">Badge Emoji</label>
+                            <input 
+                                type="text" 
+                                maxLength={2}
+                                value={editingRole.icon || ''}
+                                onChange={(e) => {
+                                    const updated = { ...editingRole, icon: e.target.value };
+                                    setEditingRole(updated);
+                                    onUpdateServer({ roles: server.roles.map(r => r.id === editingRole.id ? updated : r) });
+                                }}
+                                className="w-full bg-theme-bg border border-theme-border p-3 text-center text-xl text-theme-text font-medium focus:outline-none focus:border-theme-gold placeholder-theme-text-dim"
+                                placeholder="🛡️" 
+                            />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-bold uppercase text-[#5c4010] tracking-widest mb-4 royal-font">Privileges</label>
+                        <label className="block text-[10px] font-bold uppercase text-theme-text-dim tracking-widest mb-4 royal-font">Privileges</label>
                         <div className="space-y-2">
                           {availablePermissions.map(perm => (
-                            <div key={perm} className="flex items-center justify-between p-4 bg-[#050505] border border-[#3d2b0f] hover:border-[#5c4010] transition-colors">
+                            <div key={perm} className="flex items-center justify-between p-4 bg-theme-bg border border-theme-border hover:border-theme-text-dim transition-colors">
                               <div>
-                                <div className="text-xs font-bold text-[#D4AF37] uppercase tracking-wide mb-1">{perm.replace('_', ' ')}</div>
-                                <div className="text-[10px] text-[#8a7038]">Grant authority to {perm.toLowerCase().replace('_', ' ')}.</div>
+                                <div className="text-xs font-bold text-theme-gold uppercase tracking-wide mb-1">{perm.replace('_', ' ')}</div>
+                                <div className="text-[10px] text-theme-text-muted">Grant authority to {perm.toLowerCase().replace('_', ' ')}.</div>
                               </div>
                               <button 
                                 onClick={() => togglePermission(editingRole, perm)}
-                                className={`w-10 h-5 border transition-all relative ${editingRole.permissions.includes(perm) ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-[#3d2b0f] bg-transparent'}`}
+                                className={`w-10 h-5 border transition-all relative ${editingRole.permissions.includes(perm) ? 'border-theme-gold bg-theme-gold/10' : 'border-theme-border bg-transparent'}`}
                               >
-                                <div className={`absolute top-0.5 w-3.5 h-3.5 bg-[#D4AF37] transition-all ${editingRole.permissions.includes(perm) ? 'right-0.5' : 'left-0.5 opacity-20'}`} />
+                                <div className={`absolute top-0.5 w-3.5 h-3.5 bg-theme-gold transition-all ${editingRole.permissions.includes(perm) ? 'right-0.5' : 'left-0.5 opacity-20'}`} />
                               </button>
                             </div>
                           ))}
@@ -297,8 +374,8 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                     </div>
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
-                      <div className="text-5xl mb-4 text-[#D4AF37]">⚜️</div>
-                      <div className="font-bold uppercase text-xs tracking-widest text-[#8a7038]">Select a rank to modify</div>
+                      <div className="text-5xl mb-4 text-theme-gold">⚜️</div>
+                      <div className="font-bold uppercase text-xs tracking-widest text-theme-text-muted">Select a rank to modify</div>
                     </div>
                   )}
                 </div>
@@ -309,27 +386,27 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
           {activeTab === 'members' && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-[#D4AF37] mb-2">Subjects</h1>
-                <p className="text-[#8a7038] font-serif italic">The people of the realm.</p>
+                <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold mb-2">Subjects</h1>
+                <p className="text-theme-text-muted font-serif italic">The people of the realm.</p>
               </div>
 
-              <div className="border border-[#3d2b0f]">
+              <div className="border border-theme-border">
                 <table className="w-full text-left">
-                  <thead className="bg-[#0a0a0a] text-[10px] font-bold uppercase text-[#5c4010] tracking-widest border-b border-[#3d2b0f]">
+                  <thead className="bg-theme-panel text-[10px] font-bold uppercase text-theme-text-dim tracking-widest border-b border-theme-border">
                     <tr>
                       <th className="px-6 py-4 royal-font">Identity</th>
                       <th className="px-6 py-4 royal-font">Rank</th>
                       <th className="px-6 py-4 text-right royal-font">Judgement</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#3d2b0f]">
+                  <tbody className="divide-y divide-theme-border">
                     {allUsers.map(user => (
-                      <tr key={user.id} className="group hover:bg-[#D4AF37]/5 transition-colors">
+                      <tr key={user.id} className="group hover:bg-theme-gold/5 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border border-[#3d2b0f]" />
+                            <img src={user.avatar} className="w-10 h-10 rounded-full object-cover border border-theme-border" />
                             <div>
-                              <div className="text-sm font-bold text-[#E5C100] uppercase tracking-wide royal-font">{user.username}</div>
+                              <div className="text-sm font-bold text-theme-text-highlight uppercase tracking-wide royal-font">{user.username}</div>
                             </div>
                           </div>
                         </td>
@@ -345,8 +422,9 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                                             const updated = current.includes(role.id) ? current.filter(id => id !== role.id) : [...current, role.id];
                                             onUpdateServer({ memberRoles: { ...server.memberRoles, [user.id]: updated } });
                                         }}
-                                        className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider border transition-all ${isAssigned ? 'border-[#D4AF37] text-[#D4AF37] bg-[#D4AF37]/10' : 'border-[#3d2b0f] text-[#5c4010] hover:border-[#8a7038]'}`}
+                                        className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider border transition-all flex items-center gap-1 ${isAssigned ? 'border-theme-gold text-theme-gold bg-theme-gold/10' : 'border-theme-border text-theme-text-dim hover:border-theme-text-muted'}`}
                                     >
+                                        {role.icon && <span>{role.icon}</span>}
                                         {role.name}
                                     </button>
                                 );
@@ -355,7 +433,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
                         </td>
                         <td className="px-6 py-4 text-right">
                           {server.ownerId !== user.id && (
-                            <button className="text-[#5c4010] hover:text-red-600 transition-colors">
+                            <button className="text-theme-text-dim hover:text-red-600 transition-colors">
                               {ICONS.LogOut}
                             </button>
                           )}

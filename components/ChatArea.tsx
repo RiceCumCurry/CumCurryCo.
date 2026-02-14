@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Message, User, Notification, Server, Role } from '../types';
-import { SendHorizontal, Reply, Trash2, Copy, Forward, X } from 'lucide-react';
+import { SendHorizontal, Reply, Trash2, Copy, Forward, X, SmilePlus } from 'lucide-react';
 import ForwardModal from './ForwardModal';
 
 interface ChatAreaProps {
@@ -22,9 +22,10 @@ interface ChatAreaProps {
   onAcceptFriendRequest: (userId: string, notificationId: string) => void;
   onRejectFriendRequest: (notificationId: string) => void;
   onCall?: (type: 'VOICE' | 'VIDEO') => void;
+  onAddReaction: (messageId: string, emoji: string) => void;
 }
 
-const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉'];
+const EMOJIS = ['⚔️', '🛡️', '🧙‍♂️', '🔥', '💀', '👑', '💎', '🩸', '📜', '⚜️', '🏰', '🐉', '👍', '👎', '❤️', '😂'];
 
 const ChatArea: React.FC<ChatAreaProps> = ({ 
   channelName, 
@@ -42,7 +43,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onViewUser,
   onAcceptFriendRequest,
   onRejectFriendRequest,
-  onCall
+  onCall,
+  onAddReaction
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -53,6 +55,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   // Action States
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [reactingToMessageId, setReactingToMessageId] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +135,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const renderMessageContent = (content: string) => {
     return content.split(/(\s+)/).map((word, i) => {
         if (word === '@everyone') {
-            return <span key={i} className="bg-[#D4AF37]/20 text-[#D4AF37] px-1 rounded font-bold cursor-default">@everyone</span>;
+            return <span key={i} className="bg-theme-gold/20 text-theme-gold px-1 rounded font-bold cursor-default">@everyone</span>;
         }
         if (word.startsWith('@')) {
             const username = word.substring(1);
@@ -141,7 +144,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 return (
                     <span 
                         key={i} 
-                        className="text-[#F4C430] bg-[#F4C430]/10 px-1 rounded font-bold cursor-pointer hover:underline hover:bg-[#F4C430]/20 transition-all" 
+                        className="text-theme-gold-light bg-theme-gold/10 px-1 rounded font-bold cursor-pointer hover:underline hover:bg-theme-gold/20 transition-all" 
                         onClick={() => onViewUser(user.id)}
                     >
                         {word}
@@ -204,33 +207,33 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             />
         )}
 
-        <div className="flex-1 flex flex-col bg-[#050505] relative overflow-hidden mandala-bg min-w-0">
+        <div className="flex-1 flex flex-col bg-theme-bg relative overflow-hidden mandala-bg min-w-0">
         {/* Top Header */}
-        <div className="h-16 border-b border-[#3d2b0f] flex items-center px-8 justify-between bg-[#050505]/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
+        <div className="h-16 border-b border-theme-border flex items-center px-8 justify-between bg-theme-bg/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
             <div className="flex items-center gap-4">
-            <span className="text-[#8a7038] font-serif text-2xl">✦</span>
+            <span className="text-theme-text-muted font-serif text-2xl">✦</span>
             <div className="flex flex-col">
-                <span className="royal-font font-bold text-[#D4AF37] uppercase tracking-widest text-lg">{channelName}</span>
-                <span className="text-[9px] text-[#5c4010] uppercase tracking-[0.2em] font-bold">
+                <span className="royal-font font-bold text-theme-gold uppercase tracking-widest text-lg">{channelName}</span>
+                <span className="text-[9px] text-theme-text-dim uppercase tracking-[0.2em] font-bold">
                   {isDM ? 'Private Correspondence' : 'Chamber of Discourse'}
                 </span>
             </div>
             </div>
-            <div className="flex items-center gap-6 text-[#5c4010]">
+            <div className="flex items-center gap-6 text-theme-text-dim">
             
             {/* Private Call Buttons for DMs */}
             {isDM && onCall && (
-                <div className="flex items-center gap-4 border-r border-[#3d2b0f] pr-6">
+                <div className="flex items-center gap-4 border-r border-theme-border pr-6">
                     <button 
                         onClick={() => onCall('VOICE')}
-                        className="hover:text-[#D4AF37] hover:scale-110 transition-all"
+                        className="hover:text-theme-gold hover:scale-110 transition-all"
                         title="Voice Call"
                     >
                         {ICONS.Phone}
                     </button>
                     <button 
                         onClick={() => onCall('VIDEO')}
-                        className="hover:text-[#D4AF37] hover:scale-110 transition-all"
+                        className="hover:text-theme-gold hover:scale-110 transition-all"
                         title="Video Call"
                     >
                         {ICONS.Video}
@@ -242,7 +245,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="relative">
                 <button 
                 onClick={() => setShowNotifications(!showNotifications)}
-                className={`hover:text-[#D4AF37] transition-colors relative ${showNotifications ? 'text-[#D4AF37]' : ''}`}
+                className={`hover:text-theme-gold transition-colors relative ${showNotifications ? 'text-theme-gold' : ''}`}
                 >
                 {ICONS.Bell}
                 {unreadCount > 0 && (
@@ -251,34 +254,34 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </button>
                 
                 {showNotifications && (
-                <div className="absolute right-0 top-full mt-4 w-80 bg-[#0a0a0a] border border-[#5c4010] shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2">
-                    <div className="p-3 border-b border-[#3d2b0f] text-xs font-bold uppercase tracking-widest text-[#8a7038] bg-[#050505] royal-font">
+                <div className="absolute right-0 top-full mt-4 w-80 bg-theme-panel border border-theme-text-dim shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="p-3 border-b border-theme-border text-xs font-bold uppercase tracking-widest text-theme-text-muted bg-theme-bg royal-font">
                     Decrees & Summons
                     </div>
                     <div className="max-h-80 overflow-y-auto custom-scrollbar">
                     {notifications.length === 0 ? (
-                        <div className="p-6 text-center text-[10px] text-[#5c4010] font-medium italic">
+                        <div className="p-6 text-center text-[10px] text-theme-text-dim font-medium italic">
                         No new correspondence.
                         </div>
                     ) : (
                         notifications.map(notif => (
-                        <div key={notif.id} className="p-4 border-b border-[#3d2b0f] hover:bg-[#111] transition-colors">
-                            <div className="text-[#E5C100] text-xs mb-1 font-bold royal-font">
+                        <div key={notif.id} className="p-4 border-b border-theme-border hover:bg-white/5 transition-colors">
+                            <div className="text-theme-text-highlight text-xs mb-1 font-bold royal-font">
                             {notif.type === 'FRIEND_REQUEST' ? 'Alliance Proposal' : notif.type === 'MENTION' ? 'You were Summoned' : 'System Decree'}
                             </div>
-                            <p className="text-[#8a7038] text-[11px] mb-3">{notif.content}</p>
+                            <p className="text-theme-text-muted text-[11px] mb-3">{notif.content}</p>
                             
                             {notif.type === 'FRIEND_REQUEST' && notif.fromUserId && (
                             <div className="flex gap-2">
                                 <button 
                                 onClick={() => onAcceptFriendRequest(notif.fromUserId!, notif.id)}
-                                className="flex-1 bg-[#1a1a1a] border border-[#3d2b0f] hover:border-[#D4AF37] hover:text-[#D4AF37] text-[#5c4010] text-[9px] font-bold uppercase tracking-widest py-1 flex items-center justify-center gap-1 transition-all"
+                                className="flex-1 bg-white/5 border border-theme-border hover:border-theme-gold hover:text-theme-gold text-theme-text-dim text-[9px] font-bold uppercase tracking-widest py-1 flex items-center justify-center gap-1 transition-all"
                                 >
                                 {ICONS.Check} Accept
                                 </button>
                                 <button 
                                 onClick={() => onRejectFriendRequest(notif.id)}
-                                className="flex-1 bg-[#1a1a1a] border border-[#3d2b0f] hover:border-red-900 hover:text-red-600 text-[#5c4010] text-[9px] font-bold uppercase tracking-widest py-1 flex items-center justify-center gap-1 transition-all"
+                                className="flex-1 bg-white/5 border border-theme-border hover:border-red-900 hover:text-red-600 text-theme-text-dim text-[9px] font-bold uppercase tracking-widest py-1 flex items-center justify-center gap-1 transition-all"
                                 >
                                 {ICONS.X} Deny
                                 </button>
@@ -295,27 +298,27 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             {!isDM && (
                 <button 
                 onClick={() => setShowMembers(!showMembers)}
-                className={`hover:text-[#D4AF37] transition-colors ${showMembers ? 'text-[#D4AF37]' : ''}`}
+                className={`hover:text-theme-gold transition-colors ${showMembers ? 'text-theme-gold' : ''}`}
                 >
                     {ICONS.Users}
                 </button>
             )}
-            {!isDM && <div className="w-[1px] h-6 bg-[#3d2b0f]" />}
-            {!isDM && <button className="hover:text-[#D4AF37] transition-colors">{ICONS.Settings}</button>}
+            {!isDM && <div className="w-[1px] h-6 bg-theme-border" />}
+            {!isDM && <button className="hover:text-theme-gold transition-colors">{ICONS.Settings}</button>}
             </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar" ref={scrollRef}>
-            <div className="py-16 px-10 border-b border-[#3d2b0f] mb-10 max-w-4xl mx-auto text-center ornate-divider">
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar" ref={scrollRef} onClick={() => setReactingToMessageId(null)}>
+            <div className="py-16 px-10 border-b border-theme-border mb-10 max-w-4xl mx-auto text-center ornate-divider">
             <div>
-                <div className="w-20 h-20 rounded-full border border-[#D4AF37] flex items-center justify-center mx-auto mb-6 bg-black shadow-[0_0_30px_rgba(212,175,55,0.2)]">
-                    <span className="text-3xl text-[#D4AF37]">✦</span>
+                <div className="w-20 h-20 rounded-full border border-theme-gold flex items-center justify-center mx-auto mb-6 bg-black shadow-[0_0_30px_rgba(212,175,55,0.2)]">
+                    <span className="text-3xl text-theme-gold">✦</span>
                 </div>
-                <h1 className="text-4xl royal-font font-bold text-[#D4AF37] mb-2 uppercase tracking-widest">
+                <h1 className="text-4xl royal-font font-bold text-theme-gold mb-2 uppercase tracking-widest">
                   {isDM ? `Conversation with ${channelName}` : `Welcome to ${channelName}`}
                 </h1>
-                <p className="text-[#8a7038] font-medium text-sm tracking-wide">The archives of this conversation begin here.</p>
+                <p className="text-theme-text-muted font-medium text-sm tracking-wide">The archives of this conversation begin here.</p>
             </div>
             </div>
 
@@ -326,25 +329,47 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             const parentMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : null;
             
             return (
-                <div key={msg.id} className={`flex gap-6 group px-4 py-2 transition-all rounded-lg border border-transparent hover:border-[#3d2b0f] relative ${isMention ? 'bg-[#D4AF37]/10 border-l-2 border-l-[#D4AF37]' : 'hover:bg-[#D4AF37]/5'}`}>
+                <div key={msg.id} className={`flex gap-6 group px-4 py-2 transition-all rounded-lg border border-transparent hover:border-theme-border relative ${isMention ? 'bg-theme-gold/10 border-l-2 border-l-theme-gold' : 'hover:bg-theme-gold/5'}`}>
                 
                 {/* Action Buttons (On Hover) */}
-                <div className="absolute top-0 right-4 -translate-y-1/2 flex items-center bg-[#0a0a0a] border border-[#5c4010] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
-                    <button onClick={() => setReplyingTo(msg)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Reply">
+                <div className="absolute top-0 right-4 -translate-y-1/2 flex items-center bg-theme-panel border border-theme-text-dim rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setReactingToMessageId(reactingToMessageId === msg.id ? null : msg.id); }} 
+                        className="p-2 text-theme-text-muted hover:text-theme-gold hover:bg-white/5 transition-colors relative" 
+                        title="React"
+                    >
+                        <SmilePlus size={14} />
+                    </button>
+                    <button onClick={() => setReplyingTo(msg)} className="p-2 text-theme-text-muted hover:text-theme-gold hover:bg-white/5 transition-colors" title="Reply">
                         <Reply size={14} />
                     </button>
-                    <button onClick={() => handleCopy(msg.content)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Copy">
+                    <button onClick={() => handleCopy(msg.content)} className="p-2 text-theme-text-muted hover:text-theme-gold hover:bg-white/5 transition-colors" title="Copy">
                         <Copy size={14} />
                     </button>
-                    <button onClick={() => setForwardingMessage(msg)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Forward">
+                    <button onClick={() => setForwardingMessage(msg)} className="p-2 text-theme-text-muted hover:text-theme-gold hover:bg-white/5 transition-colors" title="Forward">
                         <Forward size={14} />
                     </button>
                     {canDelete && (
-                        <button onClick={() => onDeleteMessage(msg.id)} className="p-2 text-red-700 hover:text-red-500 hover:bg-[#1a1a1a] transition-colors" title="Delete">
+                        <button onClick={() => onDeleteMessage(msg.id)} className="p-2 text-red-700 hover:text-red-500 hover:bg-white/5 transition-colors" title="Delete">
                             <Trash2 size={14} />
                         </button>
                     )}
                 </div>
+
+                {/* Reaction Picker (Absolute) */}
+                {reactingToMessageId === msg.id && (
+                    <div className="absolute top-8 right-0 z-20 bg-theme-panel border border-theme-border p-2 grid grid-cols-6 gap-1 shadow-2xl rounded-lg animate-in fade-in zoom-in-95 duration-100 w-48">
+                        {EMOJIS.map(emoji => (
+                            <button
+                                key={emoji}
+                                onClick={(e) => { e.stopPropagation(); onAddReaction(msg.id, emoji); setReactingToMessageId(null); }}
+                                className="p-1 hover:bg-white/10 rounded text-lg flex items-center justify-center transition-colors"
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 <div 
                     className="shrink-0 pt-1 cursor-pointer"
@@ -352,32 +377,33 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 >
                     <img 
                     src={allUsers.find(u => u.id === msg.userId)?.avatar || `https://picsum.photos/seed/${msg.userId}/100/100`}
-                    className="w-12 h-12 rounded-full ring-2 ring-[#3d2b0f] group-hover:ring-[#D4AF37] transition-all object-cover shadow-lg" 
+                    className="w-12 h-12 rounded-full ring-2 ring-theme-border group-hover:ring-theme-gold transition-all object-cover shadow-lg" 
                     />
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <span 
                         onClick={() => onViewUser(msg.userId)}
-                        className="royal-font font-bold text-[#E5C100] hover:underline cursor-pointer uppercase text-xs tracking-wider"
+                        className="royal-font font-bold text-theme-text-highlight hover:underline cursor-pointer uppercase text-xs tracking-wider"
                     >
                         {allUsers.find(u => u.id === msg.userId)?.username || 'Unknown Noble'}
                     </span>
                     
                     {senderRole && (
                         <span 
-                        className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border rounded-sm"
+                        className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider border rounded-sm flex items-center gap-1"
                         style={{ 
                             color: senderRole.color, 
                             borderColor: senderRole.color,
                             backgroundColor: `${senderRole.color}15`
                         }}
                         >
+                        {senderRole.icon && <span>{senderRole.icon}</span>}
                         {senderRole.name}
                         </span>
                     )}
 
-                    <span className="text-[10px] text-[#5c4010] font-bold uppercase tracking-widest mt-0.5">
+                    <span className="text-[10px] text-theme-text-dim font-bold uppercase tracking-widest mt-0.5">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     </div>
@@ -385,15 +411,35 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                     {/* Reply Context */}
                     {parentMessage && (
                         <div className="flex items-center gap-2 mb-1 opacity-60 text-[10px] italic">
-                            <div className="w-8 h-3 border-t-2 border-l-2 border-[#5c4010] rounded-tl-lg" />
-                            <span className="text-[#8a7038] font-bold">@{allUsers.find(u => u.id === parentMessage.userId)?.username}:</span>
-                            <span className="text-[#5c4010] truncate max-w-md">{parentMessage.content}</span>
+                            <div className="w-8 h-3 border-t-2 border-l-2 border-theme-text-dim rounded-tl-lg" />
+                            <span className="text-theme-text-muted font-bold">@{allUsers.find(u => u.id === parentMessage.userId)?.username}:</span>
+                            <span className="text-theme-text-dim truncate max-w-md">{parentMessage.content}</span>
                         </div>
                     )}
 
-                    <p className="text-[#e0d6c2] leading-relaxed font-light text-[15px] font-sans tracking-wide">
+                    <p className="text-theme-text leading-relaxed font-light text-[15px] font-sans tracking-wide">
                         {renderMessageContent(msg.content)}
                     </p>
+
+                    {/* Reactions Display */}
+                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(msg.reactions).map(([emoji, userIds]) => (
+                                <button
+                                    key={emoji}
+                                    onClick={() => onAddReaction(msg.id, emoji)}
+                                    className={`px-1.5 py-0.5 rounded border text-[10px] flex items-center gap-1 transition-all ${
+                                        userIds.includes(currentUser?.id || '') 
+                                            ? 'bg-theme-gold/10 border-theme-gold text-theme-gold' 
+                                            : 'bg-white/5 border-transparent hover:border-theme-text-muted text-theme-text-muted'
+                                    }`}
+                                >
+                                    <span>{emoji}</span>
+                                    <span className="font-bold">{userIds.length}</span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 </div>
             );
@@ -402,18 +448,18 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* Input */}
-        <div className="px-8 pb-8 pt-4 bg-gradient-to-t from-[#050505] to-transparent relative shrink-0">
+        <div className="px-8 pb-8 pt-4 bg-gradient-to-t from-theme-bg to-transparent relative shrink-0">
             {/* Mention Autocomplete */}
             {mentionQuery !== null && (filteredUsers.length > 0 || showEveryoneOption) && (
-                <div className="absolute bottom-24 left-16 bg-[#0a0a0a] border border-[#5c4010] shadow-2xl z-50 rounded min-w-[200px] overflow-hidden">
-                    <div className="p-2 bg-[#1a1a1a] text-[10px] font-bold uppercase tracking-widest text-[#8a7038] border-b border-[#3d2b0f]">
+                <div className="absolute bottom-24 left-16 bg-theme-panel border border-theme-text-dim shadow-2xl z-50 rounded min-w-[200px] overflow-hidden">
+                    <div className="p-2 bg-white/5 text-[10px] font-bold uppercase tracking-widest text-theme-text-muted border-b border-theme-border">
                         Summoning
                     </div>
                     <div className="max-h-40 overflow-y-auto">
                         {showEveryoneOption && (
                             <button 
                                 onClick={() => insertMention('everyone')}
-                                className="w-full text-left px-3 py-2 hover:bg-[#D4AF37]/20 text-[#D4AF37] font-bold text-xs flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 hover:bg-theme-gold/20 text-theme-gold font-bold text-xs flex items-center gap-2"
                             >
                                 <span>@</span> everyone
                             </button>
@@ -422,10 +468,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                             <button 
                                 key={user.id}
                                 onClick={() => insertMention(user.username)}
-                                className="w-full text-left px-3 py-2 hover:bg-[#1a1a1a] flex items-center gap-2 group"
+                                className="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 group"
                             >
                                 <img src={user.avatar} className="w-5 h-5 rounded-full" />
-                                <span className="text-[#F5F5DC] group-hover:text-[#D4AF37] font-medium text-xs">{user.username}</span>
+                                <span className="text-theme-text group-hover:text-theme-gold font-medium text-xs">{user.username}</span>
                             </button>
                         ))}
                     </div>
@@ -433,12 +479,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             )}
 
             {showEmojiPicker && (
-            <div className="absolute bottom-24 right-12 bg-[#0a0a0a] border border-[#3d2b0f] p-2 grid grid-cols-4 gap-2 shadow-2xl z-50">
+            <div className="absolute bottom-24 right-12 bg-theme-panel border border-theme-border p-2 grid grid-cols-4 gap-2 shadow-2xl z-50">
                 {EMOJIS.map(emoji => (
                 <button 
                     key={emoji} 
                     onClick={() => setInputValue(prev => prev + emoji)}
-                    className="w-8 h-8 flex items-center justify-center hover:bg-[#1a1a1a] rounded text-xl"
+                    className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded text-xl"
                 >
                     {emoji}
                 </button>
@@ -448,36 +494,36 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             
             {/* Reply Indicator Bar */}
             {replyingTo && (
-                <div className="flex items-center justify-between bg-[#0a0a0a] border-t border-l border-r border-[#3d2b0f] px-4 py-2 mx-2 rounded-t text-xs">
-                    <div className="flex items-center gap-2 text-[#8a7038]">
+                <div className="flex items-center justify-between bg-theme-panel border-t border-l border-r border-theme-border px-4 py-2 mx-2 rounded-t text-xs">
+                    <div className="flex items-center gap-2 text-theme-text-muted">
                         <Reply size={12} />
-                        <span>Replying to <span className="text-[#D4AF37] font-bold">@{allUsers.find(u => u.id === replyingTo.userId)?.username}</span></span>
+                        <span>Replying to <span className="text-theme-gold font-bold">@{allUsers.find(u => u.id === replyingTo.userId)?.username}</span></span>
                     </div>
-                    <button onClick={() => setReplyingTo(null)} className="text-[#5c4010] hover:text-[#D4AF37]">
+                    <button onClick={() => setReplyingTo(null)} className="text-theme-text-dim hover:text-theme-gold">
                         <X size={14} />
                     </button>
                 </div>
             )}
 
-            <div className={`bg-[#0a0a0a] border border-[#3d2b0f] flex items-center px-4 py-3 gap-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] focus-within:border-[#8a7038] transition-all relative ${replyingTo ? 'rounded-b border-t-0' : 'rounded-none'}`}>
+            <div className={`bg-theme-panel border border-theme-border flex items-center px-4 py-3 gap-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] focus-within:border-theme-text-muted transition-all relative ${replyingTo ? 'rounded-b border-t-0' : 'rounded-none'}`}>
             {/* Decorative corners */}
             {!replyingTo && (
                 <>
-                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#D4AF37]" />
-                <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#D4AF37]" />
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-theme-gold" />
+                <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-theme-gold" />
                 </>
             )}
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#D4AF37]" />
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#D4AF37]" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-theme-gold" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-theme-gold" />
 
-            <button className="w-8 h-8 flex items-center justify-center text-[#5c4010] hover:text-[#D4AF37] transition-all">
+            <button className="w-8 h-8 flex items-center justify-center text-theme-text-dim hover:text-theme-gold transition-all">
                 {ICONS.Plus}
             </button>
             <input
                 ref={inputRef}
                 type="text"
                 placeholder={isDM ? `Message @${channelName}` : `Inscribe upon #${channelName}...`}
-                className="flex-1 bg-transparent border-none outline-none text-[#F5F5DC] placeholder-[#3d2b0f] font-medium text-[15px] royal-font"
+                className="flex-1 bg-transparent border-none outline-none text-theme-text placeholder-theme-border font-medium text-[15px] royal-font"
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -491,7 +537,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </button>
                 <button 
                 onClick={handleSend}
-                className="w-8 h-8 flex items-center justify-center text-[#D4AF37] hover:scale-110 transition-transform"
+                className="w-8 h-8 flex items-center justify-center text-theme-gold hover:scale-110 transition-transform"
                 >
                 <SendHorizontal size={20} />
                 </button>
@@ -502,16 +548,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
         {/* Member List Sidebar - Only show for servers */}
         {showMembers && !isDM && (
-            <div className="w-64 bg-[#080808] border-l border-[#3d2b0f] flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20">
-                <div className="p-4 border-b border-[#3d2b0f] bg-[#050505]">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-[#D4AF37] royal-font">
+            <div className="w-64 bg-theme-panel border-l border-theme-border flex flex-col shrink-0 animate-in slide-in-from-right-10 duration-200 shadow-xl z-20">
+                <div className="p-4 border-b border-theme-border bg-theme-bg">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-theme-gold royal-font">
                         Subjects - {server?.memberRoles ? Object.keys(server.memberRoles).length : 0}
                     </h3>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-6">
                     {memberGroups.map((group, idx) => (
                         <div key={group.role?.id || 'norole' + idx}>
-                             <div className="text-[10px] font-bold uppercase text-[#5c4010] tracking-[0.2em] mb-2 px-2 royal-font">
+                             <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-2 px-2 royal-font">
                                 {group.role ? group.role.name : 'Subjects'}
                              </div>
                              <div className="space-y-1">
@@ -519,22 +565,22 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                                     <button 
                                       key={member.id} 
                                       onClick={() => onViewUser(member.id)}
-                                      className="w-full flex items-center p-2 rounded hover:bg-[#1a1a1a] group transition-all"
+                                      className="w-full flex items-center p-2 rounded hover:bg-white/5 group transition-all"
                                     >
                                         <div className="relative shrink-0">
-                                            <img src={member.avatar} className="w-8 h-8 rounded-full border border-[#3d2b0f] group-hover:border-[#D4AF37] object-cover" />
-                                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0a] ${
+                                            <img src={member.avatar} className="w-8 h-8 rounded-full border border-theme-border group-hover:border-theme-gold object-cover" />
+                                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-theme-panel ${
                                                 member.status === 'online' ? 'bg-green-600' : 
                                                 member.status === 'idle' ? 'bg-yellow-600' : 
                                                 member.status === 'dnd' ? 'bg-red-600' : 'bg-gray-600'
                                             }`} />
                                         </div>
                                         <div className="ml-3 text-left overflow-hidden">
-                                            <div className={`text-sm font-bold truncate royal-font ${group.role ? '' : 'text-[#8a7038]'}`} style={{ color: group.role?.color }}>
+                                            <div className={`text-sm font-bold truncate royal-font ${group.role ? '' : 'text-theme-text-muted'}`} style={{ color: group.role?.color }}>
                                                 {member.username}
                                             </div>
                                             {member.customStatus && (
-                                                <div className="text-[9px] text-[#5c4010] truncate italic">{member.customStatus}</div>
+                                                <div className="text-[9px] text-theme-text-dim truncate italic">{member.customStatus}</div>
                                             )}
                                         </div>
                                     </button>

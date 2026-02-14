@@ -6,18 +6,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>cumcurry.co | Royal Messaging</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'theme-bg': 'var(--bg-royal)',
+            'theme-panel': 'var(--bg-panel)',
+            'theme-border': 'var(--border-main)',
+            'theme-gold': 'var(--gold-primary)',
+            'theme-gold-light': 'var(--gold-light)',
+            'theme-gold-dark': 'var(--gold-dark)',
+            'theme-text': 'var(--text-cream)',
+            'theme-text-highlight': 'var(--text-gold)',
+            'theme-text-muted': 'var(--text-muted)',
+            'theme-text-dim': 'var(--text-dim)',
+          }
+        }
+      }
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      /* Default (Royal) */
+      --bg-royal: #050505;
+      --bg-panel: #0a0a0a;
+      --border-main: #3d2b0f;
+      
       --gold-primary: #D4AF37;
       --gold-light: #F4C430;
       --gold-dark: #996515;
-      --bg-royal: #050505;
-      --bg-panel: #0a0a0a;
-      --text-gold: #E5C100;
+      
       --text-cream: #F5F5DC;
+      --text-gold: #E5C100;
+      --text-muted: #8a7038;
+      --text-dim: #5c4010;
+    }
+
+    /* Theme Overrides */
+    [data-theme="prismatic"] {
+      --bg-royal: #000000;
+      --bg-panel: #080808;
+      --border-main: #004d2a;
+
+      --gold-primary: #00ff9d;
+      --gold-light: #ff00ff;
+      --gold-dark: #008f5d;
+
+      --text-cream: #e0f2fe;
+      --text-gold: #00ff9d;
+      --text-muted: #008f5d;
+      --text-dim: #00442a;
+    }
+
+    [data-theme="minimalist"] {
+      --bg-royal: #0a0a0a;
+      --bg-panel: #171717;
+      --border-main: #262626;
+
+      --gold-primary: #ffffff;
+      --gold-light: #e5e5e5;
+      --gold-dark: #525252;
+
+      --text-cream: #d4d4d4;
+      --text-gold: #ffffff;
+      --text-muted: #737373;
+      --text-dim: #404040;
     }
 
     body {
@@ -26,6 +83,7 @@
       color: var(--text-cream);
       margin: 0;
       overflow: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
     }
 
     h1, h2, h3, h4, h5, h6, .royal-font {
@@ -36,10 +94,10 @@
       width: 4px;
     }
     .custom-scrollbar::-webkit-scrollbar-track {
-      background: #000;
+      background: var(--bg-panel);
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: var(--gold-dark);
+      background: var(--text-dim);
       border-radius: 2px;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -56,35 +114,37 @@
 
     /* Pattern Backgrounds */
     .mandala-bg {
-      background-color: #050505;
+      background-color: var(--bg-royal);
       background-image: 
         radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 60%),
         repeating-conic-gradient(from 0deg, transparent 0deg, transparent 20deg, rgba(212, 175, 55, 0.02) 20deg, rgba(212, 175, 55, 0.02) 22deg);
     }
+    
+    [data-theme="prismatic"] .mandala-bg {
+        background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 255, 157, 0.05) 0%, transparent 60%),
+        repeating-linear-gradient(45deg, rgba(255, 0, 255, 0.03) 0px, transparent 2px, transparent 20px);
+    }
+
+    [data-theme="minimalist"] .mandala-bg {
+      background-image: none;
+      background-color: var(--bg-royal);
+    }
 
     .pillar-texture {
-      background-color: #080808;
+      background-color: var(--bg-panel);
       background-image: 
         linear-gradient(90deg, rgba(0,0,0,0.8) 0%, transparent 50%, rgba(0,0,0,0.8) 100%),
-        repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.03) 0px, rgba(212, 175, 55, 0.03) 1px, transparent 1px, transparent 10px);
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.01) 0px, rgba(255, 255, 255, 0.01) 1px, transparent 1px, transparent 10px);
       box-shadow: inset -5px 0 15px rgba(0,0,0,0.9);
     }
 
     /* Text Effects */
     .gold-text {
-      background: linear-gradient(to bottom, #F4C430, #D4AF37, #996515);
+      background: linear-gradient(to bottom, var(--gold-light), var(--gold-primary), var(--gold-dark));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
-    }
-    
-    .gold-border {
-      border: 1px solid transparent;
-      border-image: linear-gradient(to bottom, #996515, #D4AF37, #996515) 1;
-    }
-
-    .gold-glow {
-      box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
     }
 
     .ornate-divider {
@@ -95,7 +155,7 @@
     .ornate-divider::before, .ornate-divider::after {
       content: '';
       flex: 1;
-      border-bottom: 1px solid #996515;
+      border-bottom: 1px solid var(--border-main);
     }
     .ornate-divider::before { margin-right: .5em; }
     .ornate-divider::after { margin-left: .5em; }
@@ -108,13 +168,13 @@
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: radial-gradient(circle, rgba(244, 196, 48, 0.8) 0%, rgba(212, 175, 55, 0.2) 60%, transparent 100%);
-      border: 1px solid rgba(212, 175, 55, 0.4);
+      background: radial-gradient(circle, var(--gold-light) 0%, var(--gold-primary) 60%, transparent 100%);
+      border: 1px solid var(--gold-primary);
       transform: translate(-50%, -50%) scale(0);
       pointer-events: none;
       z-index: 10000;
       animation: bubble-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+      box-shadow: 0 0 10px var(--gold-primary);
     }
 
     @keyframes bubble-pop {
@@ -126,6 +186,17 @@
         transform: translate(-50%, -50%) scale(2.5);
         opacity: 0;
       }
+    }
+
+    /* Animated Gradient for Banner */
+    @keyframes gradient-xy {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animate-gradient-xy {
+        background-size: 400% 400%;
+        animation: gradient-xy 8s ease infinite;
     }
   </style>
 <script type="importmap">

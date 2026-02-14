@@ -82,49 +82,49 @@ const GiphyPicker: React.FC<{ onClose: () => void; onSelect: (url: string) => vo
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-[#0a0a0a] border border-[#D4AF37] shadow-[0_0_50px_rgba(212,175,55,0.2)] flex flex-col h-[600px] relative">
+      <div className="w-full max-w-2xl bg-theme-panel border border-theme-gold shadow-[0_0_50px_rgba(212,175,55,0.2)] flex flex-col h-[600px] relative">
         {/* Header */}
-        <div className="p-4 border-b border-[#3d2b0f] flex justify-between items-center bg-[#050505]">
-          <h3 className="text-[#D4AF37] royal-font font-bold uppercase tracking-widest flex items-center gap-2">
+        <div className="p-4 border-b border-theme-border flex justify-between items-center bg-theme-bg">
+          <h3 className="text-theme-gold royal-font font-bold uppercase tracking-widest flex items-center gap-2">
             <span className="text-xl">🎞️</span> Giphy Portal
           </h3>
-          <button onClick={onClose} className="text-[#5c4010] hover:text-[#D4AF37] transition-colors">
+          <button onClick={onClose} className="text-theme-text-dim hover:text-theme-gold transition-colors">
             <X size={24} />
           </button>
         </div>
 
         {/* Search */}
-        <div className="p-4 bg-[#0a0a0a]">
+        <div className="p-4 bg-theme-panel">
           <form onSubmit={handleSearch} className="relative group">
              <input 
                autoFocus
                type="text" 
                placeholder="Search the archives (e.g., 'Cyberpunk', 'Retro', 'Glitch')..." 
-               className="w-full bg-[#050505] border border-[#3d2b0f] p-4 pl-12 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all placeholder-[#3d2b0f] royal-font"
+               className="w-full bg-theme-bg border border-theme-border p-4 pl-12 text-theme-text font-medium focus:outline-none focus:border-theme-gold transition-all placeholder-theme-border royal-font"
                value={query}
                onChange={(e) => setQuery(e.target.value)}
              />
-             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5c4010] group-focus-within:text-[#D4AF37] transition-colors" size={20} />
-             <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#D4AF37] text-xs font-bold uppercase tracking-widest hover:text-white">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-text-dim group-focus-within:text-theme-gold transition-colors" size={20} />
+             <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2 text-theme-gold text-xs font-bold uppercase tracking-widest hover:text-white">
                Search
              </button>
           </form>
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#050505] mandala-bg">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-theme-bg mandala-bg">
           {loading ? (
-             <div className="h-full flex items-center justify-center flex-col gap-4 text-[#8a7038]">
-               <Loader2 className="animate-spin w-10 h-10 text-[#D4AF37]" />
+             <div className="h-full flex items-center justify-center flex-col gap-4 text-theme-text-muted">
+               <Loader2 className="animate-spin w-10 h-10 text-theme-gold" />
                <span className="text-xs font-bold uppercase tracking-widest">Summoning Visuals...</span>
              </div>
           ) : giphyError ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-center">
                <div className="text-red-500 font-bold uppercase tracking-widest text-xs royal-font">Connection Severed</div>
-               <div className="text-[#8a7038] text-[10px] font-mono">{giphyError}</div>
+               <div className="text-theme-text-muted text-[10px] font-mono">{giphyError}</div>
                <button 
                  onClick={() => fetchGifs(query)}
-                 className="flex items-center gap-2 px-6 py-2 border border-[#3d2b0f] hover:bg-[#1a1a1a] hover:text-[#D4AF37] text-[#8a7038] text-xs font-bold uppercase tracking-widest transition-all royal-font"
+                 className="flex items-center gap-2 px-6 py-2 border border-theme-border hover:bg-white/5 hover:text-theme-gold text-theme-text-muted text-xs font-bold uppercase tracking-widest transition-all royal-font"
                >
                  <RotateCw size={14} /> Retry
                </button>
@@ -135,7 +135,7 @@ const GiphyPicker: React.FC<{ onClose: () => void; onSelect: (url: string) => vo
                 <button 
                   key={gif.id}
                   onClick={() => onSelect(gif.images.original.url)}
-                  className="relative group aspect-square overflow-hidden border border-[#3d2b0f] hover:border-[#D4AF37] transition-all bg-[#1a1a1a]"
+                  className="relative group aspect-square overflow-hidden border border-theme-border hover:border-theme-gold transition-all bg-theme-panel"
                 >
                   <img 
                     src={gif.images.fixed_height.url} 
@@ -143,21 +143,21 @@ const GiphyPicker: React.FC<{ onClose: () => void; onSelect: (url: string) => vo
                     className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
                   />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-[#D4AF37] font-bold text-xs uppercase tracking-widest border border-[#D4AF37] px-3 py-1 bg-black/80">Select</span>
+                    <span className="text-theme-gold font-bold text-xs uppercase tracking-widest border border-theme-gold px-3 py-1 bg-black/80">Select</span>
                   </div>
                 </button>
               ))}
             </div>
           )}
           {!loading && !giphyError && displayGifs.length === 0 && (
-             <div className="text-center mt-20 opacity-50 text-[#8a7038] font-serif italic">
+             <div className="text-center mt-20 opacity-50 text-theme-text-muted font-serif italic">
                No records found in the archives.
              </div>
           )}
         </div>
         
         {/* Footer */}
-        <div className="p-2 border-t border-[#3d2b0f] bg-[#050505] text-center">
+        <div className="p-2 border-t border-theme-border bg-theme-bg text-center">
           <img src="https://developers.giphy.com/branch/master/static/header-logo-0fec0225d189bc0eae27dac3e3770582.gif" className="h-6 mx-auto opacity-50 grayscale hover:grayscale-0 transition-all" alt="Powered by Giphy" />
         </div>
       </div>
@@ -174,12 +174,12 @@ const THEMES = {
     shadow: 'rgba(212,175,55,0.4)',
     bg: '#000000'
   },
-  cyberpunk: {
-    name: 'Neon City',
+  prismatic: {
+    name: 'Prismatic',
     border: '#00ff9d',
-    accent: '#ff00ff',
+    accent: '#00ff9d',
     shadow: 'rgba(0, 255, 157, 0.4)',
-    bg: '#0a0a0a'
+    bg: '#000000'
   },
   minimalist: {
     name: 'Void',
@@ -311,8 +311,9 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
   const rollBanner = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-    const gradient = `linear-gradient(45deg, ${randomColor()}, ${randomColor()}, ${randomColor()})`;
+    // 7 Colors Gradient
+    const colors = Array.from({length: 7}, () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'));
+    const gradient = `linear-gradient(45deg, ${colors.join(', ')})`;
     setEditForm(prev => ({ ...prev, banner: gradient }));
   };
 
@@ -369,7 +370,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
   const currentTheme = THEMES[editForm.profileTheme as keyof typeof THEMES] || THEMES.royal;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#050505] flex animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[200] bg-theme-bg flex animate-in fade-in zoom-in-95 duration-200">
       
       {showGiphyPicker && (
         <GiphyPicker 
@@ -378,32 +379,32 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
         />
       )}
 
-      <div className="w-64 bg-[#080808] border-r border-[#3d2b0f] p-6 flex flex-col gap-1">
-        <div className="text-[10px] font-bold uppercase text-[#5c4010] tracking-[0.2em] mb-6 px-2 royal-font">Personal Archive</div>
+      <div className="w-64 bg-theme-panel border-r border-theme-border p-6 flex flex-col gap-1">
+        <div className="text-[10px] font-bold uppercase text-theme-text-dim tracking-[0.2em] mb-6 px-2 royal-font">Personal Archive</div>
         <button 
           onClick={() => setActiveTab('profile')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'profile' ? 'border-[#D4AF37] bg-[#1a1a1a] text-[#F4C430]' : 'border-transparent text-[#8a7038] hover:text-[#D4AF37]'}`}
+          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'profile' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Identity
         </button>
         <button 
           onClick={() => setActiveTab('audio')}
-          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'audio' ? 'border-[#D4AF37] bg-[#1a1a1a] text-[#F4C430]' : 'border-transparent text-[#8a7038] hover:text-[#D4AF37]'}`}
+          className={`w-full text-left px-4 py-3 border-l-2 text-sm font-bold transition-all royal-font tracking-wide ${activeTab === 'audio' ? 'border-theme-gold bg-white/5 text-theme-gold-light' : 'border-transparent text-theme-text-muted hover:text-theme-gold'}`}
         >
           Resonance
         </button>
         
-        <div className="mt-auto pt-6 border-t border-[#3d2b0f] space-y-2">
+        <div className="mt-auto pt-6 border-t border-theme-border space-y-2">
           <button 
             onClick={onLogout}
-            className="w-full flex items-center justify-between px-4 py-3 border border-[#3d2b0f] hover:border-red-900 text-red-800 hover:text-red-500 transition-all text-xs font-bold uppercase tracking-widest royal-font"
+            className="w-full flex items-center justify-between px-4 py-3 border border-theme-border hover:border-red-900 text-red-800 hover:text-red-500 transition-all text-xs font-bold uppercase tracking-widest royal-font"
           >
             Abdicate
             {ICONS.LogOut}
           </button>
           <button 
             onClick={onClose}
-            className="w-full flex items-center justify-between px-4 py-3 border border-[#3d2b0f] hover:border-[#8a7038] text-[#8a7038] hover:text-[#D4AF37] transition-all text-xs font-bold uppercase tracking-widest royal-font"
+            className="w-full flex items-center justify-between px-4 py-3 border border-theme-border hover:border-theme-text-muted text-theme-text-muted hover:text-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font"
           >
             Return
             <span className="scale-75 opacity-50">ESC</span>
@@ -411,11 +412,11 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
         </div>
       </div>
 
-      <div className="flex-1 bg-[#050505] p-16 overflow-y-auto custom-scrollbar mandala-bg">
+      <div className="flex-1 bg-theme-bg p-16 overflow-y-auto custom-scrollbar mandala-bg">
         <div className="max-w-3xl mx-auto">
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
-              <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-[#D4AF37]">Your Legacy</h1>
+              <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Your Legacy</h1>
               
               {error && (
                 <div className="bg-red-900/10 border border-red-900/30 text-red-500 p-4 font-bold text-xs uppercase tracking-wide">
@@ -429,18 +430,21 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
               )}
 
               <div 
-                className="bg-[#0a0a0a] overflow-hidden shadow-2xl transition-colors duration-300"
+                className="bg-theme-panel overflow-hidden shadow-2xl transition-colors duration-300"
                 style={{ border: `1px solid ${currentTheme.border}` }}
               >
                 {/* Banner Preview/Edit */}
                 <div 
-                  className="h-32 bg-[#1a1a1a] relative group transition-colors duration-300"
+                  className="h-32 bg-theme-bg relative group transition-colors duration-300"
                   style={{ borderBottom: `1px solid ${currentTheme.border}` }}
                 >
                    {/* Background Render */}
-                   <div className="absolute inset-0 w-full h-full">
+                   <div className="absolute inset-0 w-full h-full overflow-hidden">
                      {editForm.banner && editForm.banner.startsWith('linear-gradient') ? (
-                       <div className="w-full h-full" style={{ background: editForm.banner }} />
+                       <div 
+                        className="w-full h-full animate-gradient-xy" 
+                        style={{ background: editForm.banner }} 
+                       />
                      ) : editForm.banner ? (
                        <img src={editForm.banner} className="w-full h-full object-cover opacity-60" />
                      ) : (
@@ -453,32 +457,32 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                        <div className="flex gap-2">
                           <button 
                             onClick={(e) => { e.stopPropagation(); bannerInputRef.current?.click(); }}
-                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#D4AF37] royal-font border border-[#D4AF37] bg-black/50 px-3 py-1.5 hover:bg-[#D4AF37] hover:text-black transition-all"
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-theme-gold royal-font border border-theme-gold bg-black/50 px-3 py-1.5 hover:bg-theme-gold hover:text-black transition-all"
                           >
                             <Upload size={14} /> Upload Img
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); openGiphy('banner'); }}
-                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#F4C430] royal-font border border-[#F4C430] bg-black/50 px-3 py-1.5 hover:bg-[#F4C430] hover:text-black transition-all"
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-theme-gold-light royal-font border border-theme-gold-light bg-black/50 px-3 py-1.5 hover:bg-theme-gold-light hover:text-black transition-all"
                           >
                             <Search size={14} /> Giphy
                           </button>
                           <button 
                             onClick={rollBanner}
-                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#D4AF37] royal-font border border-[#D4AF37] bg-black/50 px-3 py-1.5 hover:bg-[#D4AF37] hover:text-black transition-all"
+                            className="flex items-center gap-2 text-[10px] font-bold uppercase text-theme-gold royal-font border border-theme-gold bg-black/50 px-3 py-1.5 hover:bg-theme-gold hover:text-black transition-all"
                           >
                             <Dice5 size={14} /> Random
                           </button>
                        </div>
                        
-                       <div className="flex items-center gap-2 w-72 bg-black/50 border border-[#3d2b0f] px-2 focus-within:border-[#D4AF37] transition-colors">
-                          <LinkIcon size={12} className="text-[#8a7038] shrink-0" />
+                       <div className="flex items-center gap-2 w-72 bg-black/50 border border-theme-border px-2 focus-within:border-theme-gold transition-colors">
+                          <LinkIcon size={12} className="text-theme-text-muted shrink-0" />
                           <input
                             type="text"
                             placeholder="Or paste URL..."
                             value={editForm.banner && !editForm.banner.startsWith('data:') && !editForm.banner.startsWith('linear-gradient') ? editForm.banner : ''}
                             onChange={(e) => setEditForm(prev => ({...prev, banner: e.target.value}))}
-                            className="bg-transparent border-none text-[10px] text-[#F5F5DC] w-full py-2 focus:outline-none placeholder-[#5c4010]"
+                            className="bg-transparent border-none text-[10px] text-theme-text w-full py-2 focus:outline-none placeholder-theme-text-dim"
                             onClick={e => e.stopPropagation()}
                           />
                        </div>
@@ -516,18 +520,18 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                              onClick={() => fileInputRef.current?.click()}
                              className="flex flex-col items-center gap-1 group/btn"
                            >
-                             <Upload size={14} className="text-[#D4AF37] group-hover/btn:scale-110 transition-transform" />
-                             <span className="text-[8px] font-bold uppercase text-[#D4AF37] royal-font">Img</span>
+                             <Upload size={14} className="text-theme-gold group-hover/btn:scale-110 transition-transform" />
+                             <span className="text-[8px] font-bold uppercase text-theme-gold royal-font">Img</span>
                            </button>
                            
-                           <div className="w-8 h-[1px] bg-[#3d2b0f]" />
+                           <div className="w-8 h-[1px] bg-theme-border" />
                            
                            <button 
                              onClick={() => openGiphy('avatar')}
                              className="flex flex-col items-center gap-1 group/btn"
                            >
-                             <Search size={14} className="text-[#F4C430] group-hover/btn:scale-110 transition-transform" />
-                             <span className="text-[8px] font-bold uppercase text-[#F4C430] royal-font">Gif</span>
+                             <Search size={14} className="text-theme-gold-light group-hover/btn:scale-110 transition-transform" />
+                             <span className="text-[8px] font-bold uppercase text-theme-gold-light royal-font">Gif</span>
                            </button>
 
                            <input 
@@ -541,20 +545,20 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                       )}
                     </div>
                     {!isEditing ? (
-                      <button onClick={() => setIsEditing(true)} className="px-6 py-2 border border-[#3d2b0f] text-[#8a7038] hover:text-[#D4AF37] hover:border-[#D4AF37] transition-all text-xs font-bold uppercase tracking-widest royal-font">Rewrite History</button>
+                      <button onClick={() => setIsEditing(true)} className="px-6 py-2 border border-theme-border text-theme-text-muted hover:text-theme-gold hover:border-theme-gold transition-all text-xs font-bold uppercase tracking-widest royal-font">Rewrite History</button>
                     ) : (
                       <div className="flex gap-4">
-                        <button onClick={handleCancel} className="px-6 py-2 text-[#5c4010] hover:text-[#8a7038] transition-all text-xs font-bold uppercase tracking-widest royal-font">Cancel</button>
-                        <button onClick={handleSave} className="px-6 py-2 bg-[#D4AF37] text-black font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all royal-font">Seal Changes</button>
+                        <button onClick={handleCancel} className="px-6 py-2 text-theme-text-dim hover:text-theme-text-muted transition-all text-xs font-bold uppercase tracking-widest royal-font">Cancel</button>
+                        <button onClick={handleSave} className="px-6 py-2 bg-theme-gold text-black font-bold uppercase tracking-widest text-xs hover:brightness-110 transition-all royal-font">Seal Changes</button>
                       </div>
                     )}
                   </div>
                   
-                  <div className="bg-[#050505] p-8 border border-[#3d2b0f] space-y-8">
+                  <div className="bg-theme-bg p-8 border border-theme-border space-y-8">
                     {/* Status Selection */}
                     {isEditing ? (
                       <div>
-                         <label className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest block mb-3 royal-font">Presence</label>
+                         <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-3 royal-font">Presence</label>
                          <div className="flex gap-2 mb-4">
                            {(['online', 'idle', 'dnd', 'offline'] as const).map(s => (
                              <button
@@ -562,8 +566,8 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                                onClick={() => setEditForm({ ...editForm, status: s })}
                                className={`flex-1 py-2 px-1 text-[10px] font-bold uppercase tracking-widest border transition-all flex items-center justify-center gap-2 ${
                                  editForm.status === s 
-                                   ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#F4C430]' 
-                                   : 'border-[#3d2b0f] text-[#5c4010] hover:border-[#8a7038]'
+                                   ? 'border-theme-gold bg-theme-gold/10 text-theme-gold-light' 
+                                   : 'border-theme-border text-theme-text-dim hover:border-theme-text-muted'
                                }`}
                              >
                                <div className={`w-2 h-2 rounded-full ${statusColors[s]}`} />
@@ -576,21 +580,21 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                            placeholder="Set a custom status..."
                            value={editForm.customStatus} 
                            onChange={(e) => setEditForm({...editForm, customStatus: e.target.value})}
-                           className="w-full bg-[#0a0a0a] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all placeholder-[#3d2b0f] text-sm"
+                           className="w-full bg-theme-panel border border-theme-border p-3 text-theme-text font-medium focus:outline-none focus:border-theme-gold transition-all placeholder-theme-text-dim text-sm"
                          />
                       </div>
                     ) : (
                       <div>
-                        <label className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest block mb-2 royal-font">Presence</label>
+                        <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-2 royal-font">Presence</label>
                         <div className="flex items-center gap-3">
                            <div className={`w-3 h-3 rounded-full ${statusColors[user.status]}`} />
-                           <span className="text-[#D4AF37] font-bold uppercase text-xs tracking-wide">
+                           <span className="text-theme-gold font-bold uppercase text-xs tracking-wide">
                              {user.status === 'offline' ? 'Invisible' : user.status}
                            </span>
                            {user.customStatus && (
                              <>
-                               <span className="text-[#3d2b0f]">|</span>
-                               <span className="text-[#8a7038] font-serif italic">"{user.customStatus}"</span>
+                               <span className="text-theme-border">|</span>
+                               <span className="text-theme-text-muted font-serif italic">"{user.customStatus}"</span>
                              </>
                            )}
                         </div>
@@ -600,12 +604,12 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                     {/* Theme Selection - Only visible when editing */}
                     {isEditing && (
                       <div>
-                        <label className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest block mb-3 royal-font">Visual Style</label>
+                        <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-3 royal-font">App & Profile Theme</label>
                         <div className="grid grid-cols-3 gap-3">
                           {Object.entries(THEMES).map(([key, style]) => (
                             <button
                               key={key}
-                              onClick={() => setEditForm(prev => ({ ...prev, profileTheme: key }))}
+                              onClick={() => setEditForm(prev => ({ ...prev, profileTheme: key as 'royal' | 'prismatic' | 'minimalist' }))}
                               className="relative overflow-hidden group border transition-all duration-300 h-16 flex items-center justify-center"
                               style={{ 
                                 borderColor: editForm.profileTheme === key ? style.border : '#3d2b0f',
@@ -631,29 +635,29 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                     )}
 
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest block mb-2 royal-font">Title</label>
+                      <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-2 royal-font">Title</label>
                       {isEditing ? (
                          <input 
                            type="text" 
                            value={editForm.username} 
                            onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                           className="w-full bg-[#0a0a0a] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all"
+                           className="w-full bg-theme-panel border border-theme-border p-3 text-theme-text font-medium focus:outline-none focus:border-theme-gold transition-all"
                          />
                       ) : (
-                        <div className="text-[#F5F5DC] font-serif text-lg">{user.username}</div>
+                        <div className="text-theme-text font-serif text-lg">{user.username}</div>
                       )}
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold uppercase text-[#5c4010] tracking-widest block mb-2 royal-font">Correspondence</label>
+                      <label className="text-[10px] font-bold uppercase text-theme-text-dim tracking-widest block mb-2 royal-font">Correspondence</label>
                       {isEditing ? (
                          <input 
                            type="email" 
                            value={editForm.email} 
                            onChange={(e) => setEditForm({...editForm, email: e.target.value})}
-                           className="w-full bg-[#0a0a0a] border border-[#3d2b0f] p-3 text-[#F5F5DC] font-medium focus:outline-none focus:border-[#D4AF37] transition-all"
+                           className="w-full bg-theme-panel border border-theme-border p-3 text-theme-text font-medium focus:outline-none focus:border-theme-gold transition-all"
                          />
                       ) : (
-                        <div className="text-[#8a7038] font-serif">{user.email}</div>
+                        <div className="text-theme-text-muted font-serif">{user.email}</div>
                       )}
                     </div>
                   </div>
@@ -664,13 +668,13 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
 
           {activeTab === 'audio' && (
              <div className="space-y-10 animate-in slide-in-from-right-4 duration-300">
-               <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-[#D4AF37]">Acoustics</h1>
+               <h1 className="text-3xl royal-font font-bold uppercase tracking-widest text-theme-gold">Acoustics</h1>
                
                <div className="space-y-6">
-                 <div className="bg-[#0a0a0a] p-8 border border-[#3d2b0f]">
+                 <div className="bg-theme-panel p-8 border border-theme-border">
                    <div className="flex justify-between items-center mb-4">
-                     <h3 className="text-sm font-bold uppercase tracking-widest text-[#F4C430] royal-font">Input Sensitivity</h3>
-                     <span className="text-[10px] font-bold text-[#D4AF37] bg-[#1a1a1a] px-2 py-0.5 border border-[#3d2b0f]">{Math.round(noiseThreshold * 100)}%</span>
+                     <h3 className="text-sm font-bold uppercase tracking-widest text-theme-gold-light royal-font">Input Sensitivity</h3>
+                     <span className="text-[10px] font-bold text-theme-gold bg-white/5 px-2 py-0.5 border border-theme-border">{Math.round(noiseThreshold * 100)}%</span>
                    </div>
                    <MicVisualizer threshold={noiseThreshold} />
                    <input 
@@ -680,28 +684,28 @@ const UserSettings: React.FC<UserSettingsProps> = ({ user, noiseThreshold, onSet
                      step="0.01" 
                      value={noiseThreshold}
                      onChange={(e) => onSettingsChange({ noiseThreshold: parseFloat(e.target.value) })}
-                     className="w-full mt-6 h-1 bg-[#3d2b0f] rounded-none appearance-none cursor-pointer accent-[#D4AF37]"
+                     className="w-full mt-6 h-1 bg-theme-border rounded-none appearance-none cursor-pointer accent-theme-gold"
                    />
-                   <div className="flex justify-between text-[10px] text-[#5c4010] font-bold uppercase mt-2 royal-font">
+                   <div className="flex justify-between text-[10px] text-theme-text-dim font-bold uppercase mt-2 royal-font">
                       <span>Low Threshold (Whisper)</span>
                       <span>High Threshold (Shout)</span>
                    </div>
                  </div>
                  
                  <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-[#0a0a0a] p-6 border border-[#3d2b0f] hover:border-[#D4AF37] transition-all cursor-pointer group">
-                      <div className="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-3 group-hover:bg-[#D4AF37] group-hover:text-black transition-colors text-[#8a7038]">
+                    <div className="bg-theme-panel p-6 border border-theme-border hover:border-theme-gold transition-all cursor-pointer group">
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-theme-gold group-hover:text-black transition-colors text-theme-text-muted">
                          {ICONS.Mic}
                       </div>
-                      <h4 className="text-xs font-bold uppercase mb-2 text-[#E5C100] royal-font">Continuous</h4>
-                      <p className="text-[10px] text-[#5c4010] font-medium">Your voice is transmitted constantly when sound is detected above the threshold.</p>
+                      <h4 className="text-xs font-bold uppercase mb-2 text-theme-text-highlight royal-font">Continuous</h4>
+                      <p className="text-[10px] text-theme-text-dim font-medium">Your voice is transmitted constantly when sound is detected above the threshold.</p>
                     </div>
-                    <div className="bg-[#0a0a0a] p-6 border border-[#3d2b0f] hover:border-[#D4AF37] transition-all cursor-pointer group">
-                      <div className="w-8 h-8 rounded-full bg-[#1a1a1a] flex items-center justify-center mb-3 group-hover:bg-[#D4AF37] group-hover:text-black transition-colors text-[#8a7038]">
+                    <div className="bg-theme-panel p-6 border border-theme-border hover:border-theme-gold transition-all cursor-pointer group">
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-theme-gold group-hover:text-black transition-colors text-theme-text-muted">
                          {ICONS.MicOff}
                       </div>
-                      <h4 className="text-xs font-bold uppercase mb-2 text-[#E5C100] royal-font">Push to Talk</h4>
-                      <p className="text-[10px] text-[#5c4010] font-medium">Microphone remains silenced until a binding key is pressed.</p>
+                      <h4 className="text-xs font-bold uppercase mb-2 text-theme-text-highlight royal-font">Push to Talk</h4>
+                      <p className="text-[10px] text-theme-text-dim font-medium">Microphone remains silenced until a binding key is pressed.</p>
                     </div>
                  </div>
                </div>
