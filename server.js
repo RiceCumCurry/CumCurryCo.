@@ -91,6 +91,10 @@ const broadcastServerUpdate = (server) => {
   io.emit('server:updated', server);
 };
 
+const getUserIdFromSocket = (socketId) => {
+    return Object.keys(connectedUsers).find(key => connectedUsers[key] === socketId);
+};
+
 io.on('connection', (socket) => {
   console.log('Socket connected:', socket.id);
 
@@ -157,8 +161,6 @@ io.on('connection', (socket) => {
   socket.on('server:create', (serverData, callback) => {
     servers[serverData.id] = serverData;
     callback({ success: true });
-    // If public, broadcast to everyone for discovery? 
-    // Or just let them discover via search which reads from `servers`
   });
 
   socket.on('server:join', ({ serverId, userId }) => {
@@ -259,6 +261,26 @@ io.on('connection', (socket) => {
     if (targetSocket) {
       io.to(targetSocket).emit('friend_request_accepted', { user: users[userId] });
     }
+  });
+
+  // --- WebRTC Signaling ---
+  socket.on('call:join', ({ channelId }) => {
+      socket.join(channelId);
+      // Notify others that a new peer has joined the room
+      const userId = getUserIdFromSocket(socket.id);
+      socket.to(channelId).emit('call:peer-joined', { userId });
+  });
+
+  socket.on('call:signal', ({ targetUserId, signalData, channelId }) => {
+      const targetSocketId = connectedUsers[targetUserId];
+      const fromUserId = getUserIdFromSocket(socket.id);
+      if (targetSocketId) {
+          io.to(targetSocketId).emit('call:signal', { 
+              fromUserId, 
+              signalData,
+              channelId 
+          });
+      }
   });
 
   socket.on('disconnect', () => {

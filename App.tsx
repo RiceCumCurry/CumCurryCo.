@@ -502,13 +502,7 @@ const App: React.FC = () => {
       ...globalUserCache.filter(u => u.id !== state.currentUser?.id && !state.friends.some(f => f.id === u.id))
   ];
 
-  // Explore Logic: use public servers we might have fetched or just filter from all known if we want to show something
-  // For now, let's show all public servers from global cache + seeded ones if user doesn't have them
-  // A real app would have a dedicated 'explore' endpoint.
-  // We can assume globalUserCache contains users, but we need servers.
-  // Let's rely on the user to have joined servers or we only show what we have.
-  // WAIT: We need to populate `publicServers` on mount if we want Explore to work for non-joined servers.
-  // Added a quick fetch for that in `data:sync` logic on server (it returns `allUsers` but I'll add `allPublicServers` too, see server.js change)
+  // Explore Logic
   
   const getCallParticipants = (): User[] => {
     if (isDM && state.activeChannelId) {
@@ -565,12 +559,6 @@ const App: React.FC = () => {
                  <button onClick={() => setShowMobileMenu(true)} className="text-theme-gold"><Menu size={24} /></button>
               </div>
               <h1 className="text-2xl md:text-4xl royal-font font-bold mb-6 md:mb-10 text-theme-gold uppercase tracking-widest text-center border-b border-theme-border pb-6">Kingdoms of the Realm</h1>
-              {/* Explore logic: Show servers we are not part of, assuming we had a way to fetch them. 
-                  In this mock, I will just show *all* servers from state for demo purposes, 
-                  filtering by those we haven't joined if we could see them. 
-                  Since we only sync joined servers, Explore is limited unless we fetch public ones.
-                  For now, let's show joined servers as "Already Joined" and placeholders if empty.
-              */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
                 {state.servers.map(server => (
                     <div key={server.id} className="bg-theme-panel border border-theme-border p-4 shadow-xl hover:border-theme-gold transition-all group cursor-pointer relative overflow-hidden flex flex-col h-full">
@@ -794,11 +782,12 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {state.isCallActive && state.callType && state.currentUser && (
+      {state.isCallActive && state.callType && state.currentUser && state.activeChannelId && (
         <CallScreen 
           currentUser={state.currentUser}
           type={state.callType} 
           participants={getCallParticipants()} 
+          activeChannelId={state.activeChannelId}
           onDisconnect={() => setState(prev => ({ ...prev, isCallActive: false, callType: null }))} 
         />
       )}
