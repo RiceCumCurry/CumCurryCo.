@@ -22,6 +22,7 @@ export interface User {
   banner?: string; // New banner property
   status: 'online' | 'idle' | 'dnd' | 'offline';
   customStatus?: string; // New custom status property
+  profileTheme?: 'royal' | 'cyberpunk' | 'minimalist'; // New theme property
 }
 
 export interface Message {
@@ -29,6 +30,7 @@ export interface Message {
   userId: string;
   content: string;
   timestamp: number;
+  replyToId?: string; // New property for replies
 }
 
 export interface Channel {

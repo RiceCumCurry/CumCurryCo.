@@ -23,8 +23,22 @@ const getReservedUsernames = () => {
   return db ? JSON.parse(db) : [];
 };
 
-const saveUsersDB = (db: any) => localStorage.setItem('cc_users_db', JSON.stringify(db));
-const saveReservedUsernames = (db: any) => localStorage.setItem('cc_reserved_usernames', JSON.stringify(db));
+const saveUsersDB = (db: any) => {
+  try {
+    localStorage.setItem('cc_users_db', JSON.stringify(db));
+  } catch (e) {
+    console.error("Storage limit exceeded", e);
+    throw new Error("Storage quota exceeded. Image too large?");
+  }
+};
+
+const saveReservedUsernames = (db: any) => {
+  try {
+    localStorage.setItem('cc_reserved_usernames', JSON.stringify(db));
+  } catch (e) {
+    console.error("Storage limit exceeded", e);
+  }
+};
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -175,24 +189,28 @@ const App: React.FC = () => {
        saveReservedUsernames(newReservedList);
     }
 
-    const userRecord = db[currentEmail];
-    if (userRecord) {
-      if (updates.email && updates.email !== currentEmail) {
-         if (db[updates.email]) return "Correspondence already in use.";
-         const newRecord = { ...userRecord, email: updates.email, user: { ...userRecord.user, ...updates } };
-         delete db[currentEmail];
-         db[updates.email] = newRecord;
-      } else {
-         userRecord.user = { ...userRecord.user, ...updates };
+    try {
+      const userRecord = db[currentEmail];
+      if (userRecord) {
+        if (updates.email && updates.email !== currentEmail) {
+           if (db[updates.email]) return "Correspondence already in use.";
+           const newRecord = { ...userRecord, email: updates.email, user: { ...userRecord.user, ...updates } };
+           delete db[currentEmail];
+           db[updates.email] = newRecord;
+        } else {
+           userRecord.user = { ...userRecord.user, ...updates };
+        }
+        saveUsersDB(db);
       }
-      saveUsersDB(db);
+
+      const updatedUser = { ...state.currentUser, ...updates };
+      localStorage.setItem('cc_user', JSON.stringify(updatedUser));
+      setState(prev => ({ ...prev, currentUser: updatedUser }));
+
+      return true;
+    } catch (e) {
+      return "Storage quota exceeded. Please reduce image sizes.";
     }
-
-    const updatedUser = { ...state.currentUser, ...updates };
-    localStorage.setItem('cc_user', JSON.stringify(updatedUser));
-    setState(prev => ({ ...prev, currentUser: updatedUser }));
-
-    return true;
   };
 
   const handleServerSelect = (id: string | null) => {
@@ -217,7 +235,7 @@ const App: React.FC = () => {
     return userRoles.some(r => r.permissions.includes(permission as any));
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = (content: string, replyToId?: string) => {
       if (!state.activeChannelId || !state.currentUser) return;
 
       const activeServer = state.servers.find(s => s.id === state.activeServerId);
@@ -234,7 +252,8 @@ const App: React.FC = () => {
           id: 'm' + Date.now(),
           userId: state.currentUser.id,
           content,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          replyToId // Add reply ID
       };
       
       // Simulate mention notification for demo
@@ -258,6 +277,42 @@ const App: React.FC = () => {
           },
           notifications: newNotifications
       }));
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    if (!state.activeChannelId) return;
+    
+    setState(prev => ({
+        ...prev,
+        messages: {
+            ...prev.messages,
+            [prev.activeChannelId!]: (prev.messages[prev.activeChannelId!] || []).filter(m => m.id !== messageId)
+        }
+    }));
+  };
+
+  const handleForwardMessage = (targetId: string, content: string) => {
+      if (!state.currentUser) return;
+
+      const forwardedContent = `[Forwarded] ${content}`;
+      const newMessage: Message = {
+          id: 'm' + Date.now(),
+          userId: state.currentUser.id,
+          content: forwardedContent,
+          timestamp: Date.now()
+      };
+
+      setState(prev => ({
+          ...prev,
+          messages: {
+              ...prev.messages,
+              [targetId]: [...(prev.messages[targetId] || []), newMessage]
+          }
+      }));
+      
+      // Switch to the target channel to show it happened (Optional UX choice)
+      // For now, we'll just stay put but maybe show a toast in a real app.
+      alert(`Message forwarded to target.`);
   };
 
   const handleSendFriendRequest = (toUserId: string) => {
@@ -403,8 +458,12 @@ const App: React.FC = () => {
               notifications={state.notifications}
               allUsers={allKnownUsers}
               server={activeServer}
+              servers={state.servers}
+              friends={state.friends}
               isDM={isDM}
               onSendMessage={handleSendMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onForwardMessage={handleForwardMessage}
               onViewUser={(userId) => setState(prev => ({ ...prev, viewingUserId: userId }))}
               onAcceptFriendRequest={handleAcceptFriendRequest}
               onRejectFriendRequest={handleRejectFriendRequest}

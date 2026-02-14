@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { Message, User, Notification, Server, Role } from '../types';
-import { SendHorizontal } from 'lucide-react';
+import { SendHorizontal, Reply, Trash2, Copy, Forward, X } from 'lucide-react';
+import ForwardModal from './ForwardModal';
 
 interface ChatAreaProps {
   channelName: string;
@@ -11,8 +12,12 @@ interface ChatAreaProps {
   notifications: Notification[];
   allUsers: User[];
   server: Server | null;
+  servers: Server[]; // Added to support forwarding
+  friends: User[]; // Added to support forwarding
   isDM?: boolean;
-  onSendMessage: (content: string) => void;
+  onSendMessage: (content: string, replyToId?: string) => void;
+  onDeleteMessage: (messageId: string) => void;
+  onForwardMessage: (targetId: string, content: string) => void;
   onViewUser: (userId: string) => void;
   onAcceptFriendRequest: (userId: string, notificationId: string) => void;
   onRejectFriendRequest: (notificationId: string) => void;
@@ -28,8 +33,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   notifications,
   allUsers,
   server,
+  servers,
+  friends,
   isDM = false,
   onSendMessage,
+  onDeleteMessage,
+  onForwardMessage,
   onViewUser,
   onAcceptFriendRequest,
   onRejectFriendRequest,
@@ -41,6 +50,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   
+  // Action States
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,12 +63,24 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     }
   }, [messages, channelName]);
 
+  useEffect(() => {
+    // Focus input when replying
+    if (replyingTo && inputRef.current) {
+        inputRef.current.focus();
+    }
+  }, [replyingTo]);
+
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    onSendMessage(inputValue);
+    onSendMessage(inputValue, replyingTo?.id);
     setInputValue('');
+    setReplyingTo(null);
     setShowEmojiPicker(false);
     setMentionQuery(null);
+  };
+
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,6 +194,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   return (
     <div className="flex-1 flex overflow-hidden">
+        {forwardingMessage && (
+            <ForwardModal 
+                servers={servers} 
+                friends={friends} 
+                messageContent={forwardingMessage.content}
+                onClose={() => setForwardingMessage(null)}
+                onForward={(targetId) => onForwardMessage(targetId, forwardingMessage.content)}
+            />
+        )}
+
         <div className="flex-1 flex flex-col bg-[#050505] relative overflow-hidden mandala-bg min-w-0">
         {/* Top Header */}
         <div className="h-16 border-b border-[#3d2b0f] flex items-center px-8 justify-between bg-[#050505]/80 backdrop-blur-md sticky top-0 z-20 shadow-xl shrink-0">
@@ -287,9 +322,30 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             {messages.map((msg) => {
             const senderRole = !isDM ? getHighestRole(msg.userId) : null;
             const isMention = msg.content.includes(`@${currentUser?.username}`) || msg.content.includes('@everyone');
+            const canDelete = currentUser?.id === msg.userId || server?.ownerId === currentUser?.id;
+            const parentMessage = msg.replyToId ? messages.find(m => m.id === msg.replyToId) : null;
             
             return (
-                <div key={msg.id} className={`flex gap-6 group px-4 py-2 transition-all rounded-lg border border-transparent hover:border-[#3d2b0f] ${isMention ? 'bg-[#D4AF37]/10 border-l-2 border-l-[#D4AF37]' : 'hover:bg-[#D4AF37]/5'}`}>
+                <div key={msg.id} className={`flex gap-6 group px-4 py-2 transition-all rounded-lg border border-transparent hover:border-[#3d2b0f] relative ${isMention ? 'bg-[#D4AF37]/10 border-l-2 border-l-[#D4AF37]' : 'hover:bg-[#D4AF37]/5'}`}>
+                
+                {/* Action Buttons (On Hover) */}
+                <div className="absolute top-0 right-4 -translate-y-1/2 flex items-center bg-[#0a0a0a] border border-[#5c4010] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10 scale-90">
+                    <button onClick={() => setReplyingTo(msg)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Reply">
+                        <Reply size={14} />
+                    </button>
+                    <button onClick={() => handleCopy(msg.content)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Copy">
+                        <Copy size={14} />
+                    </button>
+                    <button onClick={() => setForwardingMessage(msg)} className="p-2 text-[#8a7038] hover:text-[#D4AF37] hover:bg-[#1a1a1a] transition-colors" title="Forward">
+                        <Forward size={14} />
+                    </button>
+                    {canDelete && (
+                        <button onClick={() => onDeleteMessage(msg.id)} className="p-2 text-red-700 hover:text-red-500 hover:bg-[#1a1a1a] transition-colors" title="Delete">
+                            <Trash2 size={14} />
+                        </button>
+                    )}
+                </div>
+
                 <div 
                     className="shrink-0 pt-1 cursor-pointer"
                     onClick={() => onViewUser(msg.userId)}
@@ -325,6 +381,16 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     </div>
+
+                    {/* Reply Context */}
+                    {parentMessage && (
+                        <div className="flex items-center gap-2 mb-1 opacity-60 text-[10px] italic">
+                            <div className="w-8 h-3 border-t-2 border-l-2 border-[#5c4010] rounded-tl-lg" />
+                            <span className="text-[#8a7038] font-bold">@{allUsers.find(u => u.id === parentMessage.userId)?.username}:</span>
+                            <span className="text-[#5c4010] truncate max-w-md">{parentMessage.content}</span>
+                        </div>
+                    )}
+
                     <p className="text-[#e0d6c2] leading-relaxed font-light text-[15px] font-sans tracking-wide">
                         {renderMessageContent(msg.content)}
                     </p>
@@ -379,11 +445,28 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 ))}
             </div>
             )}
+            
+            {/* Reply Indicator Bar */}
+            {replyingTo && (
+                <div className="flex items-center justify-between bg-[#0a0a0a] border-t border-l border-r border-[#3d2b0f] px-4 py-2 mx-2 rounded-t text-xs">
+                    <div className="flex items-center gap-2 text-[#8a7038]">
+                        <Reply size={12} />
+                        <span>Replying to <span className="text-[#D4AF37] font-bold">@{allUsers.find(u => u.id === replyingTo.userId)?.username}</span></span>
+                    </div>
+                    <button onClick={() => setReplyingTo(null)} className="text-[#5c4010] hover:text-[#D4AF37]">
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
 
-            <div className="bg-[#0a0a0a] rounded-none border border-[#3d2b0f] flex items-center px-4 py-3 gap-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] focus-within:border-[#8a7038] transition-all relative">
+            <div className={`bg-[#0a0a0a] border border-[#3d2b0f] flex items-center px-4 py-3 gap-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] focus-within:border-[#8a7038] transition-all relative ${replyingTo ? 'rounded-b border-t-0' : 'rounded-none'}`}>
             {/* Decorative corners */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#D4AF37]" />
-            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#D4AF37]" />
+            {!replyingTo && (
+                <>
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#D4AF37]" />
+                <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#D4AF37]" />
+                </>
+            )}
             <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#D4AF37]" />
             <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#D4AF37]" />
 

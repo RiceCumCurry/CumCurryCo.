@@ -18,7 +18,12 @@ const getUsersDB = (): Record<string, UserRecord> => {
 };
 
 const saveUsersDB = (db: Record<string, UserRecord>) => {
-  localStorage.setItem('cc_users_db', JSON.stringify(db));
+  try {
+    localStorage.setItem('cc_users_db', JSON.stringify(db));
+  } catch (e) {
+    console.error("Storage limit exceeded", e);
+    throw new Error("Storage quota exceeded. Cannot register new user.");
+  }
 };
 
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
@@ -68,9 +73,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         user: newUser
       };
 
-      db[email] = newRecord;
-      saveUsersDB(db);
-      onLogin(newUser);
+      try {
+        db[email] = newRecord;
+        saveUsersDB(db);
+        onLogin(newUser);
+      } catch (e: any) {
+        setError(e.message || "Failed to save registration.");
+      }
     }
   };
 
