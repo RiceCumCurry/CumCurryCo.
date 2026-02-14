@@ -21,6 +21,7 @@ interface ChannelBarProps {
   onOpenSettings: () => void;
   onOpenServerInfo: () => void;
   onOpenUserSettings: () => void;
+  onUpdateUser: (updates: Partial<User>) => Promise<boolean | string>;
 }
 
 const ChannelBar: React.FC<ChannelBarProps> = ({ 
@@ -38,12 +39,26 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
   onCreateChannel,
   onOpenSettings,
   onOpenServerInfo,
-  onOpenUserSettings
+  onOpenUserSettings,
+  onUpdateUser
 }) => {
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [showServerMenu, setShowServerMenu] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const isOwner = server?.ownerId === currentUser?.id;
+
+  const handleStatusChange = (status: 'online' | 'idle' | 'dnd' | 'offline') => {
+    onUpdateUser({ status });
+    setShowStatusMenu(false);
+  };
+
+  const statusColors = {
+    online: 'bg-green-600',
+    idle: 'bg-yellow-600',
+    dnd: 'bg-red-600',
+    offline: 'bg-gray-600'
+  };
 
   return (
     <div className="w-72 bg-[#080808] flex flex-col border-r border-[#3d2b0f] shrink-0 select-none relative z-10">
@@ -256,9 +271,36 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
               />
             </div>
           )}
+          
+          {showStatusMenu && (
+             <div className="absolute bottom-full left-0 w-full bg-[#0a0a0a] border border-[#5c4010] shadow-[0_0_40px_rgba(0,0,0,0.9)] z-50 animate-in fade-in slide-in-from-bottom-2 mb-2 p-2 flex flex-col gap-1">
+                {(['online', 'idle', 'dnd', 'offline'] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => handleStatusChange(s)}
+                    className="flex items-center gap-3 w-full p-2 hover:bg-[#1a1a1a] transition-all group"
+                  >
+                    <div className={`w-2 h-2 rounded-full ${statusColors[s]}`} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#8a7038] group-hover:text-[#D4AF37] royal-font">
+                      {s === 'offline' ? 'Invisible' : s === 'idle' ? 'Idle / AFK' : s}
+                    </span>
+                  </button>
+                ))}
+                <div className="h-[1px] bg-[#3d2b0f] my-1" />
+                 <button 
+                  onClick={() => { setShowStatusMenu(false); onOpenUserSettings(); }}
+                  className="w-full text-center py-2 text-[9px] font-bold uppercase tracking-widest text-[#5c4010] hover:text-[#D4AF37] royal-font"
+                 >
+                   Edit Profile
+                 </button>
+             </div>
+          )}
 
           <div className="flex items-center gap-3">
-            <div className="relative group cursor-pointer shrink-0" onClick={onOpenUserSettings}>
+            <div 
+              className="relative group cursor-pointer shrink-0" 
+              onClick={() => setShowStatusMenu(!showStatusMenu)}
+            >
               <img 
                 src={currentUser?.avatar || 'https://picsum.photos/seed/user/100/100'} 
                 className="w-10 h-10 rounded-full ring-1 ring-[#3d2b0f] group-hover:ring-[#D4AF37] transition-all object-cover" 
@@ -269,7 +311,7 @@ const ChannelBar: React.FC<ChannelBarProps> = ({
                  currentUser?.status === 'dnd' ? 'bg-red-600' : 'bg-gray-600'
               }`} />
             </div>
-            <div className="flex-1 min-w-0 cursor-pointer" onClick={onOpenUserSettings}>
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setShowStatusMenu(!showStatusMenu)}>
               <div className="text-[12px] font-bold text-[#E5C100] truncate leading-none uppercase tracking-wide royal-font mb-0.5">{currentUser?.username || 'Guest'}</div>
               <div className="text-[9px] text-[#5c4010] font-bold uppercase tracking-widest">
                 {currentUser?.status === 'offline' ? 'Invisible' : currentUser?.status}

@@ -35,8 +35,8 @@ const App: React.FC = () => {
         theme: 'fiery',
         createdAt: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
         roles: [
-            { id: 'r1', name: 'admin', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES'] },
-            { id: 'r2', name: 'moderator', color: '#B8860B', permissions: ['MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES'] },
+            { id: 'r1', name: 'admin', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
+            { id: 'r2', name: 'moderator', color: '#B8860B', permissions: ['MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] },
             { id: 'r3', name: 'member', color: '#A9A9A9', permissions: ['SEND_MESSAGES'] }
         ],
         memberRoles: {
@@ -191,8 +191,28 @@ const App: React.FC = () => {
     });
   };
 
+  const hasPermission = (userId: string, server: Server, permission: string): boolean => {
+    if (server.ownerId === userId) return true;
+    const roleIds = server.memberRoles[userId] || [];
+    const userRoles = server.roles.filter(r => roleIds.includes(r.id));
+    return userRoles.some(r => r.permissions.includes(permission as any));
+  };
+
   const handleSendMessage = (content: string) => {
       if (!state.activeChannelId || !state.currentUser) return;
+
+      const activeServer = state.servers.find(s => s.id === state.activeServerId);
+      
+      // Check permissions for @everyone
+      if (content.includes('@everyone')) {
+        if (activeServer && !hasPermission(state.currentUser.id, activeServer, 'MENTION_EVERYONE')) {
+          // In a real app we might block it, here we will just alert and not send, or strip it.
+          // For demo purposes, let's just alert.
+          alert("You do not have permission to summon everyone.");
+          return; 
+        }
+      }
+
       const newMessage: Message = {
           id: 'm' + Date.now(),
           userId: state.currentUser.id,
@@ -262,7 +282,7 @@ const App: React.FC = () => {
       ownerId: state.currentUser.id,
       createdAt: Date.now(),
       theme: 'fiery',
-      roles: [{ id: 'r_owner', name: 'Monarch', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES'] }],
+      roles: [{ id: 'r_owner', name: 'Monarch', color: '#D4AF37', permissions: ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'] }],
       memberRoles: { [state.currentUser.id]: ['r_owner'] },
       memberJoinedAt: { [state.currentUser.id]: Date.now() },
       channels: [
@@ -333,6 +353,7 @@ const App: React.FC = () => {
           onOpenSettings={() => setState(prev => ({ ...prev, isServerSettingsOpen: true }))}
           onOpenServerInfo={() => setState(prev => ({ ...prev, isServerInfoOpen: true }))}
           onOpenUserSettings={() => setState(prev => ({ ...prev, isUserSettingsOpen: true }))}
+          onUpdateUser={handleUpdateUser}
         />
         
         <main className="flex-1 flex flex-col relative bg-[#050505]">

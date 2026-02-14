@@ -14,7 +14,7 @@ const ServerSettings: React.FC<ServerSettingsProps> = ({ server, allUsers, onClo
   const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'members'>('overview');
   const [editingRole, setEditingRole] = useState<Role | null>(null);
 
-  const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES'];
+  const availablePermissions: Permission[] = ['MANAGE_SERVER', 'MANAGE_ROLES', 'MANAGE_CHANNELS', 'KICK_MEMBERS', 'SEND_MESSAGES', 'MENTION_EVERYONE'];
 
   const togglePermission = (role: Role, perm: Permission) => {
     const newPerms = role.permissions.includes(perm)

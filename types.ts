@@ -5,7 +5,7 @@ export enum ChannelType {
   VIDEO = 'VIDEO'
 }
 
-export type Permission = 'MANAGE_SERVER' | 'MANAGE_ROLES' | 'MANAGE_CHANNELS' | 'KICK_MEMBERS' | 'SEND_MESSAGES';
+export type Permission = 'MANAGE_SERVER' | 'MANAGE_ROLES' | 'MANAGE_CHANNELS' | 'KICK_MEMBERS' | 'SEND_MESSAGES' | 'MENTION_EVERYONE';
 
 export interface Role {
   id: string;

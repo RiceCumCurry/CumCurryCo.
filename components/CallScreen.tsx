@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ICONS } from '../constants';
 import { ChannelType, User } from '../types';
+import { Maximize2, Minimize2, MessageSquare } from 'lucide-react';
 
 interface CallScreenProps {
   type: ChannelType;
@@ -13,6 +14,8 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
   const [isMicOn, setIsMicOn] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(type === ChannelType.VIDEO);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -44,13 +47,15 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
       }
     };
 
-    initMedia();
+    if (!isMinimized) {
+        initMedia();
+    }
 
     // Cleanup tracks on unmount or toggle
     return () => {
       if (!isScreenSharing) stopTracks();
     };
-  }, [isVideoOn]);
+  }, [isVideoOn, isMinimized]);
 
   const toggleScreenShare = async () => {
     if (!isScreenSharing) {
@@ -87,9 +92,57 @@ const CallScreen: React.FC<CallScreenProps> = ({ type, participants, onDisconnec
     return () => stopTracks();
   }, []);
 
+  if (isMinimized) {
+      return (
+          <div className="fixed bottom-4 right-4 z-[100] w-80 bg-[#0a0a0a] border border-[#D4AF37] rounded-lg shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+             <div className="h-1 bg-gradient-to-r from-[#996515] via-[#F4C430] to-[#996515]" />
+             <div className="p-4 flex items-center justify-between bg-[#111]">
+                <div className="flex items-center gap-3">
+                    <span className="text-[#D4AF37] animate-pulse">●</span>
+                    <div>
+                        <div className="text-xs font-bold uppercase text-[#F5F5DC] royal-font">Active Call</div>
+                        <div className="text-[10px] text-[#8a7038]">{participants.length + 1} Participants</div>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setIsMicOn(!isMicOn)}
+                        className={`p-2 rounded hover:bg-white/10 ${isMicOn ? 'text-[#D4AF37]' : 'text-red-500'}`}
+                    >
+                        {isMicOn ? ICONS.Mic : ICONS.MicOff}
+                    </button>
+                    <button 
+                        onClick={() => handleDisconnect()}
+                        className="p-2 rounded hover:bg-red-900/50 text-red-500"
+                    >
+                        {ICONS.PhoneOff}
+                    </button>
+                    <button 
+                        onClick={() => setIsMinimized(false)}
+                        className="p-2 rounded hover:bg-white/10 text-[#F5F5DC]"
+                    >
+                        <Maximize2 size={16} />
+                    </button>
+                </div>
+             </div>
+          </div>
+      );
+  }
+
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl transition-all duration-300">
       <div className="w-full h-full max-w-7xl flex flex-col gap-6">
+        {/* Header/Minimizer */}
+        <div className="absolute top-6 right-6">
+            <button 
+                onClick={() => setIsMinimized(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] border border-[#3d2b0f] rounded-full text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-all royal-font text-xs font-bold uppercase tracking-widest"
+            >
+                <MessageSquare size={16} />
+                Text Chat
+            </button>
+        </div>
+
         {/* Participants Grid */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-center content-center">
           {isVideoOn || isScreenSharing ? (
